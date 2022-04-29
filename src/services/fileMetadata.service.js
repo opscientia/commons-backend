@@ -3,24 +3,29 @@ const dbWrapper = require('../utils/dbWrapper')
 
 const setFileMetadata = async (req) => {
   console.log('setFileMetadata: Entered')
-  if (!req.body.address || !req.body.cid || !req.body.filename) {
-    return undefined;
+  if (!req.body.address || !req.body.cid || !req.body.filename || typeof req.body.requestid !== "number") {
+    return undefined
   }
   if (req.body.address.length != 42 || req.body.address.substring(0, 2) != "0x") {
     return undefined
   }
   const address = req.body.address.toLowerCase()
   const cid = req.body.cid.toLowerCase()
+  const requestid = parseInt(req.body.requestid)
   const filename = req.body.filename.toLowerCase()
 
   const file = await dbWrapper.selectFile('cid', cid)
   if (file) {
-    console.log(`setFileMetadata: Updating row in files: address: ${address} cid: ${cid} filename: ${filename}`)
-    dbWrapper.runSql(`UPDATE files SET address=?, filename=? WHERE cid=?`, [address, filename, cid])
+    const columns = 'address=?, filename=?, requestid=?'
+    const params = [address, filename, requestid, cid]
+    console.log(`setFileMetadata: Updating row in files: columns: ${columns} params: ${params}`)
+    dbWrapper.runSql(`UPDATE files SET ${columns} WHERE cid=?`, params)
   }
   else {
-    console.log(`setFileMetadata: Inserting row into files: address: ${address} cid: ${cid} filename: ${filename}`)
-    dbWrapper.runSql(`INSERT INTO files (address, cid, filename) VALUES (?, ?, ?)`, [address, cid, filename])
+    const columns = '(address, filename, cid, requestid)'
+    const params = [address, filename, cid, requestid]
+    console.log(`setFileMetadata: Inserting row into files: columns: ${columns} params: ${params}`)
+    dbWrapper.runSql(`INSERT INTO files ${columns} VALUES (?, ?, ?, ?)`, params)
   }
   return true;
 }
@@ -60,14 +65,19 @@ module.exports = {
     if (req.get('Authorization') != `Basic ${process.env.AUTH_TOKEN}`) {
       return res.status(400).json({ error: "Incorrect Authorization header." })
     }
-    const cid = req.body.cid;
-    const address = req.body.address
-    const filename = req.body.filename
+    const newRow = {
+      address: req.body.address, 
+      filename: req.body.filename, 
+      cid: req.body.cid, 
+      requestid: req.body.requestid
+    }
     const success = await setFileMetadata(req)
     if (success) {
-      return res.status(200).json({ data: `Successfully set file metadata for file: userAddress: ${address} cid: ${cid} filename: ${filename}` })
+      return res.status(200).json({ data: {
+        message: `Successfully set file metadata for file: ${req.body.filename}`,
+        newFileMetadata: newRow
+      }})
     }
-    return res.status(400).json({ error: `An error ocurred trying to set file metadata for file: ` 
-                                        + `userAddress: ${address} cid: ${cid} filename: ${filename}`})
+    return res.status(400).json({ error: `An error ocurred trying to set file metadata for file: ${req.body.filename}`})
   }
 }

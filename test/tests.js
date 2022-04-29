@@ -50,9 +50,10 @@ describe('fileMetadata/', function () {
     // Post 1
     let url = `http://localhost:3005/fileMetadata`
     const firstData = { 
-      address: this.address.toLowerCase(), 
-      cid: 'bafkqaedkovzxiyltnfwxa3dforsxg5ak', 
-      filename: 'esttest.txt' 
+      address: this.address.toLowerCase(),
+      filename: 'esttest.txt',
+      cid: 'bafkqaedkovzxiyltnfwxa3dforsxg5ak',
+      requestid: 28608177
     }
     let response = await axios.post(url, firstData, {
       headers: { Authorization: `Basic ${process.env.AUTH_TOKEN}` }
@@ -71,9 +72,10 @@ describe('fileMetadata/', function () {
     // Post 2
     url = `http://localhost:3005/fileMetadata`
     const secondData = { 
-      address: this.address.toLowerCase(), 
-      cid: 'bafkqaedkovzxiyltnfwxa3dforsxg5ak', 
-      filename: 'differentname.txt' 
+      address: this.address.toLowerCase(),
+      filename: 'differentname.txt',
+      cid: 'bafkqaedkovzxiyltnfwxa3dforsxg5ak',
+      requestid: 28608177
     }
     response = await axios.post(url, secondData, {
       headers: { Authorization: `Basic ${process.env.AUTH_TOKEN}` }
