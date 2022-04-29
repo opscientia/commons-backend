@@ -45,41 +45,48 @@ describe('fileMetadata/', function () {
   before(function () {
     this.address = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
   })
-  // (address TEXT, cid TEXT, filename TEXT)
+  
   it('Should correctly update file metadata', async function () {
-    const firstUploadLimit = 0
+    // Post 1
     let url = `http://localhost:3005/fileMetadata`
-    let data = { 
-      address: this.address, 
+    const firstData = { 
+      address: this.address.toLowerCase(), 
       cid: 'bafkqaedkovzxiyltnfwxa3dforsxg5ak', 
       filename: 'esttest.txt' 
     }
-    let response = await axios.post(url, data, {
+    let response = await axios.post(url, firstData, {
       headers: { Authorization: `Basic ${process.env.AUTH_TOKEN}` }
     })
     console.log(await response.data)
     expect(response.status).to.equal(200)
 
-    // url = `http://localhost:3005/fileMetadata?address=${this.address}`
-    // response = await axios.get(url, {
-    //   headers: { Authorization: `Basic ${process.env.AUTH_TOKEN}` }
-    // })
-    // let uploadLimit = parseInt(await response.data)
-    // expect(uploadLimit).to.equal(firstUploadLimit)
+    // Get 1
+    url = `http://localhost:3005/fileMetadata?address=${this.address}`
+    response = await axios.get(url, {
+      headers: { Authorization: `Basic ${process.env.AUTH_TOKEN}` }
+    })
+    let files = await response.data
+    expect(files).to.be.an('array').that.has.deep.members([firstData])
 
-    // const newUploadLimit = 2
-    // url = `http://localhost:3005/fileMetadata`
-    // data = { address: this.address, limit: newUploadLimit }
-    // response = await axios.post(url, data, {
-    //   headers: { Authorization: `Basic ${process.env.AUTH_TOKEN}` }
-    // })
-    // expect(response.status).to.equal(200)
+    // Post 2
+    url = `http://localhost:3005/fileMetadata`
+    const secondData = { 
+      address: this.address.toLowerCase(), 
+      cid: 'bafkqaedkovzxiyltnfwxa3dforsxg5ak', 
+      filename: 'differentname.txt' 
+    }
+    response = await axios.post(url, secondData, {
+      headers: { Authorization: `Basic ${process.env.AUTH_TOKEN}` }
+    })
+    console.log(await response.data)
+    expect(response.status).to.equal(200)
 
-    // url = `http://localhost:3005/fileMetadata?address=${this.address}`
-    // response = await axios.get(url, {
-    //   headers: { Authorization: `Basic ${process.env.AUTH_TOKEN}` }
-    // })
-    // uploadLimit = parseInt(await response.data)
-    // expect(uploadLimit).to.equal(newUploadLimit)
+    // Get 2
+    url = `http://localhost:3005/fileMetadata?address=${this.address}`
+    response = await axios.get(url, {
+      headers: { Authorization: `Basic ${process.env.AUTH_TOKEN}` }
+    })
+    files = await response.data
+    expect(files).to.be.an('array').that.has.deep.members([secondData])
   })
 })
