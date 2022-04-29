@@ -53,7 +53,7 @@ const getFileMetadata = async (req) => {
 module.exports = {
   getFileMetadata: async (req, res) => {
     if (req.get('Authorization') != `Basic ${process.env.AUTH_TOKEN}`) {
-      return res.status(400).json({ error: "Incorrect Authorization header." })
+      return res.status(403).json({ error: "Incorrect Authorization header." })
     }
     const files = await getFileMetadata(req)
     if (files) {
@@ -63,7 +63,7 @@ module.exports = {
   },
   setFileMetadata: async (req, res) => {
     if (req.get('Authorization') != `Basic ${process.env.AUTH_TOKEN}`) {
-      return res.status(400).json({ error: "Incorrect Authorization header." })
+      return res.status(403).json({ error: "Incorrect Authorization header." })
     }
     const newRow = {
       address: req.body.address, 
