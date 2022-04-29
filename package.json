@@ -1,0 +1,21 @@
+{
+  "name": "opsci-commons-rbac",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "chai": "^4.3.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.17.1",
+    "helmet": "^4.2.0",
+    "sqlite3": "^5.0.4"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/server.js"
+  },
+  "author": "Caleb Tuttle",
+  "license": "MIT"
+}
