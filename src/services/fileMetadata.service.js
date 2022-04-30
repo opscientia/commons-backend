@@ -1,6 +1,49 @@
 const express = require('express')
 const dbWrapper = require('../utils/dbWrapper')
 
+/**
+ * Delete file by requestid
+ */
+const deleteFileMetadata = async (req) => {
+  console.log('deleteFileMetadata: Entered')
+  if (!req.query.address || typeof req.query.requestid !== "number") {
+    return undefined
+  }
+  if (req.query.address.length != 42 || req.query.address.substring(0, 2) != "0x") {
+    return undefined
+  }
+  const address = req.query.address.toLowerCase()
+  const requestid = parseInt(req.query.requestid)
+
+  const filesBelongingToUser = await dbWrapper.getFilesByUserAddress(address)
+  const hasFile = filesBelongingToUser.filter(file => file.requestid == requestid).length > 0
+  const file = await dbWrapper.selectFile('requestid', requestid)
+  if (hasFile && file) {
+    const params = [address, requestid]
+    console.log(`deleteFileMetadata: Deleting row in files that has the following address and requestid: ${params}`)
+    dbWrapper.runSql(`DELETE FROM files WHERE address=? AND requestid=?`, params)
+    let success = true
+    fetch(`https://api.estuary.tech/pinning/pins/${requestid}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: 'Bearer ' + process.env.ESTUARY_API_KEY,
+      }
+    })
+      .then(data => {
+        return data.json();
+      })
+      .then(data => {
+        success = true
+      })
+      .catch(err => {
+        console.log(err)
+        success = false
+      })
+    return success
+  }
+  return false
+}
+
 const setFileMetadata = async (req) => {
   console.log('setFileMetadata: Entered')
   if (!req.body.address || !req.body.cid || !req.body.filename || typeof req.body.requestid !== "number") {
@@ -77,6 +120,16 @@ module.exports = {
         message: `Successfully set file metadata for file: ${req.body.filename}`,
         newFileMetadata: newRow
       }})
+    }
+    return res.status(400).json({ error: `An error ocurred trying to set file metadata for file: ${req.body.filename}`})
+  },
+  deleteFileMetadata: async (req, res) => {
+    if (req.get('Authorization') != `Basic ${process.env.AUTH_TOKEN}`) {
+      return res.status(403).json({ error: "Incorrect Authorization header." })
+    }
+    const success = await deleteFileMetadata(req)
+    if (success) {
+      return res.status(200).json({ data: `Successfully deleted file metadata for file: ${req.body.filename}` })
     }
     return res.status(400).json({ error: `An error ocurred trying to set file metadata for file: ${req.body.filename}`})
   }
