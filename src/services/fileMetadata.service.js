@@ -35,10 +35,12 @@ const deleteFileMetadata = async (req) => {
         return data.json();
       })
       .then(data => {
+        console.log(`deleteFileMetadata: Successfully submit delete request to Estuary for file with requestid ${requestid}`)
         success = true
       })
       .catch(err => {
         console.log(err)
+        console.log(`deleteFileMetadata: Failed to submit delete request to Estuary for file with requestid ${requestid}`)
         success = false
       })
     return success
