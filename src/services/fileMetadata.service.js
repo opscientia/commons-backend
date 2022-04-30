@@ -2,7 +2,9 @@ const express = require('express')
 const dbWrapper = require('../utils/dbWrapper')
 
 /**
- * Delete file by requestid
+ * Delete file by address && requestid.
+ * Example:
+ * curl -X DELETE http://localhost:3005/fileMetadata?address=address=0x0000000000000000000000000000000000000000&requestid=123
  */
 const deleteFileMetadata = async (req) => {
   console.log('deleteFileMetadata: Entered')
