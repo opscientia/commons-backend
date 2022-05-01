@@ -1,4 +1,5 @@
 const express = require('express')
+const axios = require('axios')
 const dbWrapper = require('../utils/dbWrapper')
 
 /**
@@ -8,7 +9,7 @@ const dbWrapper = require('../utils/dbWrapper')
  */
 const deleteFileMetadata = async (req) => {
   console.log('deleteFileMetadata: Entered')
-  if (!req.query.address || typeof req.query.requestid !== "number") {
+  if (!req.query.address || !req.query.requestid) {
     return undefined
   }
   if (req.query.address.length != 42 || req.query.address.substring(0, 2) != "0x") {
@@ -25,24 +26,20 @@ const deleteFileMetadata = async (req) => {
     console.log(`deleteFileMetadata: Deleting row in files that has the following address and requestid: ${params}`)
     dbWrapper.runSql(`DELETE FROM files WHERE address=? AND requestid=?`, params)
     let success = true
-    fetch(`https://api.estuary.tech/pinning/pins/${requestid}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: 'Bearer ' + process.env.ESTUARY_API_KEY,
-      }
-    })
-      .then(data => {
-        return data.json();
+    try {
+      const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${requestid}`, {
+        headers: {
+          Authorization: 'Bearer ' + process.env.ESTUARY_API_KEY,
+        }
       })
-      .then(data => {
-        console.log(`deleteFileMetadata: Successfully submit delete request to Estuary for file with requestid ${requestid}`)
-        success = true
-      })
-      .catch(err => {
-        console.log(err)
-        console.log(`deleteFileMetadata: Failed to submit delete request to Estuary for file with requestid ${requestid}`)
-        success = false
-      })
+      const data = resp.data
+      console.log(`deleteFileMetadata: Successfully submit delete request to Estuary for file with requestid ${requestid}`)
+    }
+    catch (err) {
+      console.log(err)
+      console.log(`deleteFileMetadata: Failed to submit delete request to Estuary for file with requestid ${requestid}`)
+      success = false
+    }
     return success
   }
   return false
@@ -50,7 +47,7 @@ const deleteFileMetadata = async (req) => {
 
 const setFileMetadata = async (req) => {
   console.log('setFileMetadata: Entered')
-  if (!req.body.address || !req.body.cid || !req.body.filename || typeof req.body.requestid !== "number") {
+  if (!req.body.address || !req.body.cid || !req.body.filename || !req.body.requestid) {
     return undefined
   }
   if (req.body.address.length != 42 || req.body.address.substring(0, 2) != "0x") {
@@ -90,11 +87,10 @@ const getFileMetadata = async (req) => {
   const address = req.query.address.toLowerCase()
   const files = await dbWrapper.getFilesByUserAddress(address)
   if (files) {
-    console.log(files)
     console.log(`getFileMetadata: files.length == ${files.length}`)
     return files;
   }
-  console.log(`getUploadLimit: Address ${address} has no files`)
+  console.log(`getFileMetadata: Address ${address} has no files`)
 }
 
 module.exports = {

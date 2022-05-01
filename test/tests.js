@@ -41,6 +41,7 @@ describe('userUploadLimit/', function () {
   })
 })
 
+// TODO: test deleteFileMetadata
 describe('fileMetadata/', function () {
   before(function () {
     this.address = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'

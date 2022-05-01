@@ -101,7 +101,6 @@ module.exports.runSql = (sql, params) => {
         reject(err)
       }
       else {
-        console.log(`Executed the SQL command "${sql}" with params "${params}`)
         resolve()
       }
     })
