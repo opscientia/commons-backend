@@ -33,7 +33,7 @@ const deleteFileMetadata = async (req) => {
         }
       })
       const data = resp.data
-      console.log(`deleteFileMetadata: Successfully submit delete request to Estuary for file with requestid ${requestid}`)
+      console.log(`deleteFileMetadata: Successfully submitted delete request to Estuary for file with requestid ${requestid}`)
     }
     catch (err) {
       console.log(err)
@@ -80,17 +80,17 @@ const setFileMetadata = async (req) => {
  * curl -X GET http://localhost:3005/fileMetadata?address=0x0000000000000000000000000000000000000000
  */
 const getFileMetadata = async (req) => {
-  console.log('getFileMetadata: Entered')
+  // console.log('getFileMetadata: Entered')
   if (!req.query.address) {
     return undefined;
   }
   const address = req.query.address.toLowerCase()
   const files = await dbWrapper.getFilesByUserAddress(address)
   if (files) {
-    console.log(`getFileMetadata: files.length == ${files.length}`)
+    // console.log(`getFileMetadata: files.length == ${files.length}`)
     return files;
   }
-  console.log(`getFileMetadata: Address ${address} has no files`)
+  // console.log(`getFileMetadata: Address ${address} has no files`)
 }
 
 module.exports = {
