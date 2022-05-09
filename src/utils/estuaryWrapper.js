@@ -19,6 +19,7 @@ module.exports.getPinsList = async () => {
   } catch (err) {
     console.log(err);
   }
+  return undefined;
 };
 
 module.exports.uploadFile = async (file) => {

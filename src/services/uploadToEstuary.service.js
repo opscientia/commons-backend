@@ -14,8 +14,12 @@ const uploadFile = async (req) => {
     return false;
   }
   const address = req.body.address.toLowerCase();
-
   console.log(req.file);
+
+  // Rename file
+  const fileDir = req.file.path.replace(req.file.filename, "");
+  const newPath = fileDir + req.file.originalname;
+  fs.renameSync(req.file.path, newPath);
 
   // Get metadata for all Estuary pins before file upload
   const pinsMetadataBefore = await estuaryWrapper.getPinsList();
@@ -23,8 +27,7 @@ const uploadFile = async (req) => {
 
   // Upload file
   console.log(`Uploading ${req.file.originalname} to Estuary`);
-  req.file.filename = req.file.originalname;
-  const file = fs.createReadStream(req.file.path);
+  const file = fs.createReadStream(newPath);
   const success = await estuaryWrapper.uploadFile(file);
   fs.unlink(file.path, (err) => {
     if (err) throw err;
@@ -35,12 +38,12 @@ const uploadFile = async (req) => {
   // Get metadata for all Estuary pins after file upload
   const pinsMetadataAfter = await estuaryWrapper.getPinsList();
   if (!pinsMetadataAfter) return false;
-  const newPinsMetadata = pinsMetadataAfter.filter((x) => pinsMetadataBefore.indexOf(x) == -1);
+  const newPinsMetadata = pinsMetadataAfter.filter(({ requestid: rid1 }) => !pinsMetadataBefore.some(({ requestid: rid2 }) => rid1 == rid2));
   // Get metadata for the uploaded file
   let newPinMetadata;
   if (newPinsMetadata.length === 1) {
     newPinMetadata = {
-      address: web3Context.accountId,
+      address: address,
       filename: newPinsMetadata[0].filename,
       cid: newPinsMetadata[0].cid,
       requestid: newPinsMetadata[0].requestid,
