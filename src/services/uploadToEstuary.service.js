@@ -60,10 +60,7 @@ const uploadFile = async (req) => {
   // If metadata for uploaded file is already in db, update db. Otherwise insert.
   const fileMetadata = await dbWrapper.selectFile("cid", newPinMetadata["cid"]);
   if (fileMetadata) {
-    const columns = "address=?, filename=?, requestid=?";
-    const params = [address, newPinMetadata["filename"], newPinMetadata["requestid"], newPinMetadata["cid"]];
-    console.log(`uploadFile: Updating row in files: columns: ${columns} params: ${params}`);
-    dbWrapper.runSql(`UPDATE files SET ${columns} WHERE cid=?`, params);
+    return false;
   } else {
     const columns = "(address, filename, cid, requestid)";
     const params = [address, newPinMetadata["filename"], newPinMetadata["cid"], newPinMetadata["requestid"]];
