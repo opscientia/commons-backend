@@ -14,22 +14,21 @@ const removeFile = (filePath) => {
   });
 };
 
-const uploadFile = async (req) => {
-  console.log("uploadFile: Entered");
-  const address = req.body.address.toLowerCase();
-  const providedSig = req.body.signature;
-  if (!address || !req.file || !providedSig) {
+const validateInput = async (req) => {
+  if (!req.body.address || !req.file || !req.body.signature) {
     console.log("Missing argument");
     if (req.file) removeFile(req.file.path);
     return false;
   }
-  if (address.length != 42 || address.substring(0, 2) != "0x") {
+  if (req.body.address.length != 42 || req.body.address.substring(0, 2) != "0x") {
+    console.log("Invalid address");
     removeFile(req.file.path);
     return false;
   }
+  const address = req.body.address.toLowerCase();
   const fileAsString = fs.readFileSync(req.file.path, "utf8");
   const fileHash = web3.utils.sha3(fileAsString);
-  const signer = await ethers.utils.recoverAddress(fileHash, providedSig).toLowerCase();
+  const signer = (await ethers.utils.recoverAddress(fileHash, req.body.signature)).toLowerCase();
   if (signer != address) {
     console.log("signer != address");
     console.log(`signer:  ${signer}`);
@@ -40,7 +39,7 @@ const uploadFile = async (req) => {
   try {
     const user = await dbWrapper.getUserByAddress(address);
     if (user.uploadlimit <= 0) {
-      console.log("User isn't in whitelist");
+      console.log(`User ${user.address} isn't on whitelist`);
       console.log(user);
       removeFile(req.file.path);
       return false;
@@ -50,7 +49,14 @@ const uploadFile = async (req) => {
     removeFile(req.file.path);
     return false;
   }
+  return true;
+};
+
+const uploadFile = async (req) => {
+  console.log("uploadFile: Entered");
+  if (!(await validateInput(req))) return false;
   console.log(req.file);
+  const address = req.body.address.toLowerCase();
 
   // Rename file
   const fileDir = req.file.path.replace(req.file.filename, "");
@@ -100,9 +106,9 @@ const uploadFile = async (req) => {
     return false;
   }
 
-  // If metadata for uploaded file is already in db, update db. Otherwise insert.
-  const fileMetadata = await dbWrapper.selectFile("cid", newPinMetadata["cid"]);
+  const fileMetadata = await dbWrapper.selectFile(["cid", "address"], [newPinMetadata["cid"], address]);
   if (fileMetadata) {
+    console.log("User has already uploaded this file");
     return false;
   } else {
     const columns = "(address, filename, cid, requestid)";
