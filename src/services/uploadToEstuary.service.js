@@ -2,18 +2,54 @@ const express = require("express");
 const axios = require("axios");
 const fs = require("fs");
 const FormData = require("form-data");
+const web3 = require("web3");
+const { ethers } = require("ethers");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 
+const removeFile = (filePath) => {
+  fs.unlink(filePath, (err) => {
+    if (err) throw err;
+    console.log(`Removed ${filePath}`);
+  });
+};
+
 const uploadFile = async (req) => {
   console.log("uploadFile: Entered");
-  if (!req.body.address || !req.file) {
-    return false;
-  }
-  if (req.body.address.length != 42 || req.body.address.substring(0, 2) != "0x") {
-    return false;
-  }
   const address = req.body.address.toLowerCase();
+  const providedSig = req.body.signature;
+  if (!address || !req.file || !providedSig) {
+    console.log("Missing argument");
+    if (req.file) removeFile(req.file.path);
+    return false;
+  }
+  if (address.length != 42 || address.substring(0, 2) != "0x") {
+    removeFile(req.file.path);
+    return false;
+  }
+  const fileAsString = fs.readFileSync(req.file.path, "utf8");
+  const fileHash = web3.utils.sha3(fileAsString);
+  const signer = await ethers.utils.recoverAddress(fileHash, providedSig).toLowerCase();
+  if (signer != address) {
+    console.log("signer != address");
+    console.log(`signer:  ${signer}`);
+    console.log(`address: ${address}`);
+    removeFile(req.file.path);
+    return false;
+  }
+  try {
+    const user = await dbWrapper.getUserByAddress(address);
+    if (user.uploadlimit <= 0) {
+      console.log("User isn't in whitelist");
+      console.log(user);
+      removeFile(req.file.path);
+      return false;
+    }
+  } catch (err) {
+    console.log(err);
+    removeFile(req.file.path);
+    return false;
+  }
   console.log(req.file);
 
   // Rename file
@@ -23,21 +59,28 @@ const uploadFile = async (req) => {
 
   // Get metadata for all Estuary pins before file upload
   const pinsMetadataBefore = await estuaryWrapper.getPinsList();
-  if (!pinsMetadataBefore) return false;
+  if (!pinsMetadataBefore) {
+    console.log(`Failed to get pins for ${address}`);
+    removeFile(req.file.path);
+    return false;
+  }
 
   // Upload file
   console.log(`Uploading ${req.file.originalname} to Estuary`);
   const file = fs.createReadStream(newPath);
   const success = await estuaryWrapper.uploadFile(file);
-  fs.unlink(file.path, (err) => {
-    if (err) throw err;
-    console.log(`Removed ${file.path}`);
-  });
-  if (!success) return false;
+  removeFile(file.path);
+  if (!success) {
+    console.log(`Failed to upload ${req.file.originalname} to Estuary`);
+    return false;
+  }
 
   // Get metadata for all Estuary pins after file upload
   const pinsMetadataAfter = await estuaryWrapper.getPinsList();
-  if (!pinsMetadataAfter) return false;
+  if (!pinsMetadataAfter) {
+    console.log(`Failed to get pins for ${address}`);
+    return false;
+  }
   const newPinsMetadata = pinsMetadataAfter.filter(({ requestid: rid1 }) => !pinsMetadataBefore.some(({ requestid: rid2 }) => rid1 == rid2));
   // Get metadata for the uploaded file
   let newPinMetadata;
@@ -72,9 +115,6 @@ const uploadFile = async (req) => {
 
 module.exports = {
   uploadFile: async (req, res) => {
-    if (req.get("Authorization") != `Basic ${process.env.AUTH_TOKEN}`) {
-      return res.status(403).json({ error: "Incorrect Authorization header." });
-    }
     const success = await uploadFile(req);
     if (success) {
       return res.status(200).json({
