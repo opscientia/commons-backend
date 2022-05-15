@@ -1,5 +1,7 @@
 const express = require("express");
 const axios = require("axios");
+const web3 = require("web3");
+const { ethers } = require("ethers");
 const dbWrapper = require("../utils/dbWrapper");
 
 /**
@@ -30,7 +32,7 @@ const getFileMetadata = async (req) => {
  */
 const deleteFileMetadata = async (req) => {
   console.log("deleteFileMetadata: Entered");
-  if (!req.query.address || !req.query.requestid) {
+  if (!req.query.address || !req.query.requestid || !req.query.signature) {
     return false;
   }
   if (req.query.address.length != 42 || req.query.address.substring(0, 2) != "0x") {
@@ -38,27 +40,48 @@ const deleteFileMetadata = async (req) => {
   }
   const address = req.query.address.toLowerCase();
   const requestid = parseInt(req.query.requestid);
+  const signature = req.query.signature;
 
-  const filesBelongingToUser = await dbWrapper.getFilesByUserAddress(address);
-  const hasFile = filesBelongingToUser.filter((file) => file.requestid == requestid).length > 0;
-  const file = await dbWrapper.selectFile(["requestid"], [requestid]);
-  if (hasFile && file) {
+  // Ensure signer == address == address associated with this requestid
+  const strToSign = `/fileMetadata?address=${req.query.address}&requestid=${requestid}`;
+  const hashedStr = web3.utils.sha3(strToSign);
+  let signer;
+  try {
+    signer = (await ethers.utils.recoverAddress(hashedStr, signature)).toLowerCase();
+  } catch (err) {
+    console.log(err);
+    console.log("deleteFileMetadata: malformed signature");
+    return false;
+  }
+  if (signer != address) {
+    console.log("deleteFileMetadata: signer != address");
+    console.log(`deleteFileMetadata: signer:  ${signer}`);
+    console.log(`deleteFileMetadata: address: ${address}`);
+    return false;
+  }
+  const file = await dbWrapper.selectFile(["requestid", "address"], [requestid, address]);
+  if (file) {
     const params = [address, requestid];
     console.log(`deleteFileMetadata: Deleting row in files that has the following address and requestid: ${params}`);
     dbWrapper.runSql(`DELETE FROM files WHERE address=? AND requestid=?`, params);
     let success = true;
-    try {
-      const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${requestid}`, {
-        headers: {
-          Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
-        },
-      });
-      const data = resp.data;
-      console.log(`deleteFileMetadata: Successfully submitted delete request to Estuary for file with requestid ${requestid}`);
-    } catch (err) {
-      console.log(err);
-      console.log(`deleteFileMetadata: Failed to submit delete request to Estuary for file with requestid ${requestid}`);
-      success = false;
+    let numAttempts = 0;
+    while (numAttempts < 5) {
+      try {
+        const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${requestid}`, {
+          headers: {
+            Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+          },
+        });
+        const data = resp.data;
+        console.log(`deleteFileMetadata: Successfully submitted delete request to Estuary for file with requestid ${requestid}`);
+        break;
+      } catch (err) {
+        console.log(err);
+        console.log(`deleteFileMetadata: Failed to submit delete request to Estuary for file with requestid ${requestid}`);
+        success = false;
+        numAttempts++;
+      }
     }
     return success;
   }
@@ -101,9 +124,6 @@ module.exports = {
     return res.status(400).json({ error: "No files for the specified address" });
   },
   deleteFileMetadata: async (req, res) => {
-    if (req.get("Authorization") != `Basic ${process.env.AUTH_TOKEN}`) {
-      return res.status(403).json({ error: "Incorrect Authorization header." });
-    }
     const success = await deleteFileMetadata(req);
     if (success) {
       return res.status(200).json({ data: `Successfully deleted file metadata for file: ${req.body.filename}` });
