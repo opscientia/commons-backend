@@ -17,7 +17,7 @@
     "web3": "^1.7.3"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npx mocha",
     "start": "node src/server.js"
   },
   "author": "Caleb Tuttle",
