@@ -109,6 +109,21 @@ const uploadFile = async (req) => {
   const fileMetadata = await dbWrapper.selectFile(["cid", "address"], [newPinMetadata["cid"], address]);
   if (fileMetadata) {
     console.log("User has already uploaded this file");
+    // Delete from Estuary
+    let numAttempts = 0;
+    while (numAttempts < 5) {
+      try {
+        const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${newPinMetadata["requestid"]}`, {
+          headers: {
+            Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+          },
+        });
+        break;
+      } catch (err) {
+        console.log(err);
+        numAttempts++;
+      }
+    }
     return false;
   } else {
     const columns = "(address, filename, cid, requestid)";
