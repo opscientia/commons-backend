@@ -15,7 +15,6 @@ const getFileMetadata = async (req) => {
     return undefined;
   }
   const address = req.query.address.toLowerCase();
-  console.log(`address == ${address}`);
   const files = await dbWrapper.getFilesByUserAddress(address);
   if (files) {
     return files;
