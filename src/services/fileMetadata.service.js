@@ -11,7 +11,6 @@ const dbWrapper = require("../utils/dbWrapper");
  * curl -X GET http://localhost:3005/fileMetadata?address=0x0000000000000000000000000000000000000000
  */
 const getFileMetadata = async (req) => {
-  console.log("getFileMetadata: Entered");
   if (!req.query.address) {
     return undefined;
   }
@@ -19,10 +18,8 @@ const getFileMetadata = async (req) => {
   console.log(`address == ${address}`);
   const files = await dbWrapper.getFilesByUserAddress(address);
   if (files) {
-    console.log(`getFileMetadata: files.length == ${files.length}`);
     return files;
   }
-  console.log(`getFileMetadata: Address ${address} has no files`);
 };
 
 /**
