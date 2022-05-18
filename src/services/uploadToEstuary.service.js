@@ -14,8 +14,9 @@ const removeFile = (filePath) => {
   });
 };
 
+// Validate input for uploadFile()
 const validateInput = async (req) => {
-  if (!req.body.address || !req.file || !req.body.signature) {
+  if (!req.body.address || !req.file || !req.body.signature || !req.body.path) {
     console.log("Missing argument");
     if (req.file) removeFile(req.file.path);
     return false;
@@ -57,11 +58,12 @@ const uploadFile = async (req) => {
   if (!(await validateInput(req))) return false;
   console.log(req.file);
   const address = req.body.address.toLowerCase();
+  const path = req.body.path;
 
   // Rename file
   const fileDir = req.file.path.replace(req.file.filename, "");
-  const newPath = fileDir + req.file.originalname;
-  fs.renameSync(req.file.path, newPath);
+  const localFilePath = fileDir + req.file.originalname;
+  fs.renameSync(req.file.path, localFilePath);
 
   // Get metadata for all Estuary pins before file upload
   const pinsMetadataBefore = await estuaryWrapper.getPinsList();
@@ -73,8 +75,8 @@ const uploadFile = async (req) => {
 
   // Upload file
   console.log(`Uploading ${req.file.originalname} to Estuary`);
-  const file = fs.createReadStream(newPath);
-  const success = await estuaryWrapper.uploadFile(file);
+  const file = fs.createReadStream(localFilePath);
+  const success = await estuaryWrapper.uploadFile(file, 3);
   removeFile(file.path);
   if (!success) {
     console.log(`Failed to upload ${req.file.originalname} to Estuary`);
@@ -126,10 +128,10 @@ const uploadFile = async (req) => {
     }
     return false;
   } else {
-    const columns = "(address, filename, cid, requestid)";
-    const params = [address, newPinMetadata["filename"], newPinMetadata["cid"], newPinMetadata["requestid"]];
+    const columns = "(address, filename, path, cid, requestid)";
+    const params = [address, newPinMetadata["filename"], path, newPinMetadata["cid"], newPinMetadata["requestid"]];
     console.log(`uploadFile: Inserting row into files: columns: ${columns} params: ${params}`);
-    dbWrapper.runSql(`INSERT INTO files ${columns} VALUES (?, ?, ?, ?)`, params);
+    dbWrapper.runSql(`INSERT INTO files ${columns} VALUES (?, ?, ?, ?, ?)`, params);
   }
   return true;
 };

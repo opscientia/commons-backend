@@ -22,20 +22,25 @@ module.exports.getPinsList = async () => {
   return undefined;
 };
 
-module.exports.uploadFile = async (file) => {
-  let success = false;
+module.exports.uploadFile = async (file, maxAttempts) => {
+  if (!maxAttempts) maxAttempts = 1;
+
   const formData = new FormData();
   formData.append("data", file);
-  try {
-    const resp = await axios.post("https://shuttle-4.estuary.tech/content/add", formData, {
-      headers: {
-        Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
-      },
-    });
-    success = true;
-  } catch (err) {
-    success = false;
-    console.log(`Code: ${err.code}. Message: ${err.message}`);
+
+  let numAttempts = 0;
+  while (numAttempts < maxAttempts) {
+    try {
+      const resp = await axios.post("https://shuttle-4.estuary.tech/content/add", formData, {
+        headers: {
+          Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+        },
+      });
+      return true;
+    } catch (err) {
+      numAttempts++;
+      console.log(`Code: ${err.code}. Message: ${err.message}`);
+    }
   }
-  return success;
+  return false;
 };
