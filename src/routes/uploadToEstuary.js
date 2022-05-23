@@ -5,6 +5,6 @@ const upload = multer({ dest: "estuaryUploads/" });
 
 const uploadToEstuaryService = require("../services/uploadToEstuary.service");
 
-router.post("/", upload.single("data"), uploadToEstuaryService.uploadFile);
+router.post("/", upload.array("data"), uploadToEstuaryService.uploadFiles);
 
 module.exports = router;

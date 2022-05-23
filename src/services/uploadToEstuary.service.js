@@ -4,8 +4,12 @@ const fs = require("fs");
 const FormData = require("form-data");
 const web3 = require("web3");
 const { ethers } = require("ethers");
+const mv = require("mv");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
+
+const { packToFs } = require("ipfs-car/pack/fs");
+const { FsBlockStore } = require("ipfs-car/blockstore/fs");
 
 const removeFile = (filePath) => {
   fs.unlink(filePath, (err) => {
@@ -53,10 +57,42 @@ const validateInput = async (req) => {
   return true;
 };
 
-const uploadFile = async (req) => {
+const uploadFiles = async (req) => {
   console.log("uploadFile: Entered");
-  if (!(await validateInput(req))) return false;
-  console.log(req.file);
+  // if (!(await validateInput(req))) return false;
+  console.log(req.files);
+
+  // Move uploaded files into correct folders
+  const uniqueFolder = req.files[0].destination + req.files[0].filename + "0";
+  for (const file of req.files) {
+    const userDefinedPath = req.body[file.originalname].startsWith("/")
+      ? req.body[file.originalname].substring(1)
+      : req.body[file.originalname];
+    if (!userDefinedPath.includes("/")) {
+      continue;
+    }
+    const localFileDir = file.path.replace(file.filename, "").replace(uniqueFolder, "");
+    const newLocalFilePath = uniqueFolder + "/" + localFileDir + userDefinedPath;
+
+    mv(file.path, newLocalFilePath, { mkdirp: true }, function (err) {
+      console.log(err);
+    });
+  }
+
+  // TODO: const carName = uniqueFolder.numChildDirs == 1 ? uniqueFolder.childDir : 'output.car'
+  const { root, filename } = await packToFs({
+    input: uniqueFolder,
+    output: `${uniqueFolder}/output.car`,
+    blockstore: new FsBlockStore(),
+  });
+
+  // TODO: Upload to Estuary
+
+  // rm -rf path/to/files
+  // fs.fsPromises(path, { recursive: true, force: true })
+
+  return;
+
   const address = req.body.address.toLowerCase();
   const path = req.body.path;
 
@@ -89,7 +125,9 @@ const uploadFile = async (req) => {
     console.log(`Failed to get pins for ${address}`);
     return false;
   }
-  const newPinsMetadata = pinsMetadataAfter.filter(({ requestid: rid1 }) => !pinsMetadataBefore.some(({ requestid: rid2 }) => rid1 == rid2));
+  const newPinsMetadata = pinsMetadataAfter.filter(
+    ({ requestid: rid1 }) => !pinsMetadataBefore.some(({ requestid: rid2 }) => rid1 == rid2)
+  );
   // Get metadata for the uploaded file
   let newPinMetadata;
   if (newPinsMetadata.length === 1) {
@@ -137,8 +175,8 @@ const uploadFile = async (req) => {
 };
 
 module.exports = {
-  uploadFile: async (req, res) => {
-    const success = await uploadFile(req);
+  uploadFiles: async (req, res) => {
+    const success = await uploadFiles(req);
     if (success) {
       return res.status(200).json({
         data: `Successfully uploaded file ${req.file.originalname} for ${req.body.address}`,
