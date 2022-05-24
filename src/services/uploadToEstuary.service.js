@@ -1,33 +1,44 @@
 const express = require("express");
 const axios = require("axios");
 const fs = require("fs");
+const fse = require("fs-extra");
 const FormData = require("form-data");
 const web3 = require("web3");
 const { ethers } = require("ethers");
-const mv = require("mv");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 
 const { packToFs } = require("ipfs-car/pack/fs");
 const { FsBlockStore } = require("ipfs-car/blockstore/fs");
 
-const removeFile = (filePath) => {
-  fs.unlink(filePath, (err) => {
-    if (err) throw err;
-    console.log(`Removed ${filePath}`);
-  });
+const removeFiles = async (pathToFiles) => {
+  try {
+    await fse.remove(pathToFiles);
+    console.log(`Removed ${pathToFiles}`);
+  } catch (err) {
+    console.error(err);
+  }
+
+  // The following is equivalen to "rm -rf path/to/files"
+  // fsPromises.rm(pathToFiles, { recursive: true, force: true });
+  // console.log(`Removed ${pathToFiles}`);
+
+  // fs.unlink(pathToFiles, (err) => {
+  //   if (err) throw err;
+  //   console.log(`Removed ${pathToFiles}`);
+  // });
 };
 
 // Validate input for uploadFile()
 const validateInput = async (req) => {
   if (!req.body.address || !req.file || !req.body.signature || !req.body.path) {
     console.log("Missing argument");
-    if (req.file) removeFile(req.file.path);
+    if (req.file) await removeFiles(req.file.path);
     return false;
   }
   if (req.body.address.length != 42 || req.body.address.substring(0, 2) != "0x") {
     console.log("Invalid address");
-    removeFile(req.file.path);
+    await removeFiles(req.file.path);
     return false;
   }
   const address = req.body.address.toLowerCase();
@@ -38,7 +49,7 @@ const validateInput = async (req) => {
     console.log("signer != address");
     console.log(`signer:  ${signer}`);
     console.log(`address: ${address}`);
-    removeFile(req.file.path);
+    await removeFiles(req.file.path);
     return false;
   }
   try {
@@ -46,12 +57,12 @@ const validateInput = async (req) => {
     if (user.uploadlimit <= 0) {
       console.log(`User ${user.address} isn't on whitelist`);
       console.log(user);
-      removeFile(req.file.path);
+      await removeFiles(req.file.path);
       return false;
     }
   } catch (err) {
     console.log(err);
-    removeFile(req.file.path);
+    await removeFiles(req.file.path);
     return false;
   }
   return true;
@@ -71,51 +82,43 @@ const uploadFiles = async (req) => {
     if (!userDefinedPath.includes("/")) {
       continue;
     }
-    const localFileDir = file.path.replace(file.filename, "").replace(uniqueFolder, "");
-    const newLocalFilePath = uniqueFolder + "/" + localFileDir + userDefinedPath;
+    const newLocalFilePath = uniqueFolder + "/" + userDefinedPath;
 
-    mv(file.path, newLocalFilePath, { mkdirp: true }, function (err) {
+    try {
+      console.log(`Move from ${file.path}`);
+      console.log(`Move to   ${newLocalFilePath}`);
+      await fse.move(file.path, newLocalFilePath);
+    } catch (err) {
       console.log(err);
-    });
+      return;
+    }
   }
 
-  // TODO: const carName = uniqueFolder.numChildDirs == 1 ? uniqueFolder.childDir : 'output.car'
-  const { root, filename } = await packToFs({
+  // TODO: const carName = uniqueFolder.numChildDirs == 1 ? uniqueFolder.childDir : '${req.files[0].filename + "0"}.car'
+  const { root, filename: carFilename } = await packToFs({
     input: uniqueFolder,
-    output: `${uniqueFolder}/output.car`,
+    output: `${uniqueFolder}/${req.files[0].filename + "0"}.car`,
     blockstore: new FsBlockStore(),
   });
 
-  // TODO: Upload to Estuary
-
-  // rm -rf path/to/files
-  // fs.fsPromises(path, { recursive: true, force: true })
-
-  return;
-
   const address = req.body.address.toLowerCase();
-  const path = req.body.path;
-
-  // Rename file
-  const fileDir = req.file.path.replace(req.file.filename, "");
-  const localFilePath = fileDir + req.file.originalname;
-  fs.renameSync(req.file.path, localFilePath);
+  const path = req.body.path; // path of uploaded folder from root (this is used by the frontend)
 
   // Get metadata for all Estuary pins before file upload
   const pinsMetadataBefore = await estuaryWrapper.getPinsList();
   if (!pinsMetadataBefore) {
     console.log(`Failed to get pins for ${address}`);
-    removeFile(req.file.path);
+    await removeFiles(uniqueFolder);
     return false;
   }
 
   // Upload file
-  console.log(`Uploading ${req.file.originalname} to Estuary`);
-  const file = fs.createReadStream(localFilePath);
-  const success = await estuaryWrapper.uploadFile(file, 3);
-  removeFile(file.path);
-  if (!success) {
-    console.log(`Failed to upload ${req.file.originalname} to Estuary`);
+  console.log(`Uploading ${carFilename} to Estuary`);
+  const file = fs.createReadStream(carFilename);
+  const uploadSuccess = await estuaryWrapper.uploadFile(file, 3);
+  await removeFiles(uniqueFolder);
+  if (!uploadSuccess) {
+    console.log(`Failed to upload ${carFilename} to Estuary`);
     return false;
   }
 
@@ -179,7 +182,7 @@ module.exports = {
     const success = await uploadFiles(req);
     if (success) {
       return res.status(200).json({
-        data: `Successfully uploaded file ${req.file.originalname} for ${req.body.address}`,
+        data: `Successfully uploaded file(s) for ${req.body.address}`,
       });
     }
     return res.status(400).json({ error: `An error ocurred` });
