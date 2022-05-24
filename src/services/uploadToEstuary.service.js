@@ -5,13 +5,13 @@ const fse = require("fs-extra");
 const FormData = require("form-data");
 const web3 = require("web3");
 const { ethers } = require("ethers");
+const { packToFs } = require("ipfs-car/pack/fs");
+const { FsBlockStore } = require("ipfs-car/blockstore/fs");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 
-const { packToFs } = require("ipfs-car/pack/fs");
-const { FsBlockStore } = require("ipfs-car/blockstore/fs");
-
 const removeFiles = async (pathToFiles) => {
+  if (pathToFiles == "estuaryUploads/") return;
   try {
     await fse.remove(pathToFiles);
     console.log(`Removed ${pathToFiles}`);
@@ -31,25 +31,25 @@ const removeFiles = async (pathToFiles) => {
 
 // Validate input for uploadFile()
 const validateInput = async (req) => {
-  if (!req.body.address || !req.file || !req.body.signature || !req.body.path) {
+  if (!req.body.address || !req.files || !req.body.signature) {
     console.log("Missing argument");
-    if (req.file) await removeFiles(req.file.path);
+    await removeFiles(req.files[0].destination);
     return false;
   }
   if (req.body.address.length != 42 || req.body.address.substring(0, 2) != "0x") {
     console.log("Invalid address");
-    await removeFiles(req.file.path);
+    await removeFiles(req.files[0].destination);
     return false;
   }
   const address = req.body.address.toLowerCase();
-  const fileAsString = fs.readFileSync(req.file.path, "utf8");
+  const fileAsString = fs.readFileSync(req.files[0].path, "utf8");
   const fileHash = web3.utils.sha3(fileAsString);
   const signer = (await ethers.utils.recoverAddress(fileHash, req.body.signature)).toLowerCase();
   if (signer != address) {
     console.log("signer != address");
     console.log(`signer:  ${signer}`);
     console.log(`address: ${address}`);
-    await removeFiles(req.file.path);
+    await removeFiles(req.files[0].destination);
     return false;
   }
   try {
@@ -57,12 +57,12 @@ const validateInput = async (req) => {
     if (user.uploadlimit <= 0) {
       console.log(`User ${user.address} isn't on whitelist`);
       console.log(user);
-      await removeFiles(req.file.path);
+      await removeFiles(req.files[0].destination);
       return false;
     }
   } catch (err) {
     console.log(err);
-    await removeFiles(req.file.path);
+    await removeFiles(req.files[0].destination);
     return false;
   }
   return true;
@@ -70,11 +70,11 @@ const validateInput = async (req) => {
 
 const uploadFiles = async (req) => {
   console.log("uploadFile: Entered");
-  // if (!(await validateInput(req))) return false;
+  if (!(await validateInput(req))) return false;
   console.log(req.files);
 
   // Move uploaded files into correct folders
-  const uniqueFolder = req.files[0].destination + req.files[0].filename + "0";
+  const uniqueFolder = req.files[0].destination;
   for (const file of req.files) {
     const userDefinedPath = req.body[file.originalname].startsWith("/")
       ? req.body[file.originalname].substring(1)
@@ -85,8 +85,6 @@ const uploadFiles = async (req) => {
     const newLocalFilePath = uniqueFolder + "/" + userDefinedPath;
 
     try {
-      console.log(`Move from ${file.path}`);
-      console.log(`Move to   ${newLocalFilePath}`);
       await fse.move(file.path, newLocalFilePath);
     } catch (err) {
       console.log(err);
