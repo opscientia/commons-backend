@@ -109,12 +109,13 @@ const uploadFiles = async (req) => {
       await fse.move(file.path, newLocalFilePath);
     } catch (err) {
       console.log(err);
-      return;
+      return false;
     }
   }
 
   const folderChildren = fs.readdirSync(timestampedFolder);
-  const userDefinedRootFolder = folderChildren.length == 1 ? `${timestampedFolder}/${folderChildren[0]}/` : timestampedFolder;
+  if (folderChildren.length != 1) return false;
+  const userDefinedRootFolder = `${timestampedFolder}/${folderChildren[0]}/`;
 
   const validBids = await runBidsValidation(userDefinedRootFolder);
   if (!validBids) {
