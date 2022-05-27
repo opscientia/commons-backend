@@ -10,6 +10,8 @@ const { FsBlockStore } = require("ipfs-car/blockstore/fs");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 
+const validate = require("bids-validator");
+
 const removeFiles = async (pathToFiles) => {
   if (pathToFiles == "estuaryUploads/") return;
   try {
@@ -18,19 +20,38 @@ const removeFiles = async (pathToFiles) => {
   } catch (err) {
     console.error(err);
   }
+};
 
-  // The following is equivalen to "rm -rf path/to/files"
-  // fsPromises.rm(pathToFiles, { recursive: true, force: true });
-  // console.log(`Removed ${pathToFiles}`);
-
-  // fs.unlink(pathToFiles, (err) => {
-  //   if (err) throw err;
-  //   console.log(`Removed ${pathToFiles}`);
-  // });
+const runBidsValidation = async (pathToDirectory) => {
+  return new Promise((resolve) => {
+    // const dirName = values.files[0].webkitRelativePath.split('/')[1]
+    // const defaultConfig = `${dirName}/.bids-validator-config.json`
+    let valid = false;
+    validate.default.BIDS(
+      pathToDirectory,
+      {
+        verbose: true,
+        ignoreWarnings: true,
+        ignoreNiftiHeaders: true,
+        ignoreSubjectConsistency: true,
+        // config: defaultConfig
+      },
+      (issues, summary) => {
+        if (issues.errors.length > 0) {
+          console.log("BIDS validation failed");
+          console.log(issues);
+          resolve(false);
+        } else {
+          console.log("BIDS validation succeeded");
+          resolve(true);
+        }
+      }
+    );
+  });
 };
 
 // Validate input for uploadFile()
-const validateInput = async (req) => {
+const runInitialInputValidation = async (req) => {
   if (!req.body.address || !req.files || !req.body.signature) {
     console.log("Missing argument");
     await removeFiles(req.files[0].destination);
@@ -70,11 +91,11 @@ const validateInput = async (req) => {
 
 const uploadFiles = async (req) => {
   console.log("uploadFile: Entered");
-  if (!(await validateInput(req))) return false;
+  if (!(await runInitialInputValidation(req))) return false;
   console.log(req.files);
 
   // Move uploaded files into correct folders
-  const uniqueFolder = req.files[0].destination;
+  const timestampedFolder = req.files[0].destination;
   for (const file of req.files) {
     const userDefinedPath = req.body[file.originalname].startsWith("/")
       ? req.body[file.originalname].substring(1)
@@ -82,7 +103,7 @@ const uploadFiles = async (req) => {
     if (!userDefinedPath.includes("/")) {
       continue;
     }
-    const newLocalFilePath = uniqueFolder + "/" + userDefinedPath;
+    const newLocalFilePath = timestampedFolder + "/" + userDefinedPath;
 
     try {
       await fse.move(file.path, newLocalFilePath);
@@ -92,10 +113,18 @@ const uploadFiles = async (req) => {
     }
   }
 
-  // TODO: const carName = uniqueFolder.numChildDirs == 1 ? uniqueFolder.childDir : '${req.files[0].filename + "0"}.car'
+  const folderChildren = fs.readdirSync(timestampedFolder);
+  const userDefinedRootFolder = folderChildren.length == 1 ? `${timestampedFolder}/${folderChildren[0]}/` : timestampedFolder;
+
+  const validBids = await runBidsValidation(userDefinedRootFolder);
+  if (!validBids) {
+    await removeFiles(timestampedFolder);
+    return false;
+  }
+
   const { root, filename: carFilename } = await packToFs({
-    input: uniqueFolder,
-    output: `${uniqueFolder}/${req.files[0].filename + "0"}.car`,
+    input: userDefinedRootFolder,
+    output: `${timestampedFolder}/${folderChildren[0]}.car`,
     blockstore: new FsBlockStore(),
   });
 
@@ -106,7 +135,7 @@ const uploadFiles = async (req) => {
   const pinsMetadataBefore = await estuaryWrapper.getPinsList();
   if (!pinsMetadataBefore) {
     console.log(`Failed to get pins for ${address}`);
-    await removeFiles(uniqueFolder);
+    await removeFiles(timestampedFolder);
     return false;
   }
 
@@ -114,7 +143,7 @@ const uploadFiles = async (req) => {
   console.log(`Uploading ${carFilename} to Estuary`);
   const file = fs.createReadStream(carFilename);
   const uploadSuccess = await estuaryWrapper.uploadFile(file, 3);
-  await removeFiles(uniqueFolder);
+  await removeFiles(timestampedFolder);
   if (!uploadSuccess) {
     console.log(`Failed to upload ${carFilename} to Estuary`);
     return false;
