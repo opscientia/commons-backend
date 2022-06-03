@@ -15,7 +15,8 @@ db.serialize(() => {
   let columns = "(address TEXT, uploadlimit INTEGER)"; // uploadlimit == upload limit in GB
   db.prepare(`CREATE TABLE IF NOT EXISTS users ${columns}`).run().finalize();
 
-  columns = "(address TEXT, filename TEXT, path TEXT, cid TEXT, requestid INTEGER)"; // address == user's crypto address
+  // address == user's crypto address. carcid == CID of the CAR file into which this file was packed
+  columns = "(address TEXT, filename TEXT, path TEXT, carcid TEXT, requestid INTEGER)";
   db.prepare(`CREATE TABLE IF NOT EXISTS files ${columns}`).run().finalize();
 });
 

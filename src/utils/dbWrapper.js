@@ -74,6 +74,30 @@ module.exports.selectFile = (columns, values) => {
 };
 
 /**
+ * Select from files table where column_i=value_i.
+ * @returns Row in files table if file exists, null otherwise. Returns all items that matches query.
+ */
+module.exports.selectFiles = (columns, values) => {
+  if (columns.length !== values.length) {
+    throw new Error("dbWrapper.selectFile: columns.length must equal values.length");
+  }
+  if (columns.length === 0) {
+    throw new Error("dbWrapper.selectFile: columns.length and values.length must be greater than 0");
+  }
+  const columnsStr = columns.join("=? AND ") + "=?";
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT * FROM files WHERE ${columnsStr}`, values, (err, rows) => {
+      if (err) {
+        console.log(err);
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+};
+
+/**
  * Get all files that belong to a user
  */
 module.exports.getFilesByUserAddress = async (address) => {

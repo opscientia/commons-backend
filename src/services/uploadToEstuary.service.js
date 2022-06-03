@@ -89,12 +89,10 @@ const runInitialInputValidation = async (req) => {
   return true;
 };
 
-const uploadFiles = async (req) => {
-  console.log("uploadFile: Entered");
-  if (!(await runInitialInputValidation(req))) return false;
-  console.log(req.files);
-
-  // Move uploaded files into correct folders
+// Move uploaded files into the folders that the user had them in.
+// E.g., if user uploaded /testdir/abc.txt, move the local file abc.txt to <tmpFolder>/testdir/abc.txt
+const moveFilesToCorrectFolders = async (req) => {
+  const files = [];
   const timestampedFolder = req.files[0].destination;
   for (const file of req.files) {
     const userDefinedPath = req.body[file.originalname].startsWith("/")
@@ -104,41 +102,52 @@ const uploadFiles = async (req) => {
       continue;
     }
     const newLocalFilePath = timestampedFolder + "/" + userDefinedPath;
+    file.localFilePath = newLocalFilePath;
+    file.userDefinedPath = userDefinedPath;
+    file.filename = file.originalname;
+    files.push(file);
 
     try {
       await fse.move(file.path, newLocalFilePath);
     } catch (err) {
       console.log(err);
-      return false;
+      return [];
     }
   }
+  return files;
+};
 
-  const folderChildren = fs.readdirSync(timestampedFolder);
-  if (folderChildren.length != 1) return false;
-  const userDefinedRootFolder = `${timestampedFolder}/${folderChildren[0]}/`;
+const uploadFiles = async (req) => {
+  console.log("uploadFile: Entered");
+  if (!(await runInitialInputValidation(req))) return false;
+  console.log(req.files);
 
-  const validBids = await runBidsValidation(userDefinedRootFolder);
+  const address = req.body.address.toLowerCase();
+  const path = req.body.path; // path of uploaded folder from root (this is used by the frontend)
+
+  const files = await moveFilesToCorrectFolders(req);
+  if (files.length == 0) {
+    await removeFiles(timestampedFolder);
+    return false;
+  }
+
+  const timestampedFolder = req.files[0].destination;
+  const dirChildren = fs.readdirSync(timestampedFolder);
+  if (dirChildren.length != 1) return false;
+  const userDefinedRootDir = dirChildren[0];
+  const userDefinedRootDirLocal = `${timestampedFolder}/${userDefinedRootDir}/`;
+
+  const validBids = await runBidsValidation(userDefinedRootDirLocal);
   if (!validBids) {
     await removeFiles(timestampedFolder);
     return false;
   }
 
   const { root, filename: carFilename } = await packToFs({
-    input: userDefinedRootFolder,
-    output: `${timestampedFolder}/${folderChildren[0]}.car`,
+    input: userDefinedRootDirLocal,
+    output: `${timestampedFolder}/${userDefinedRootDir}.car`,
     blockstore: new FsBlockStore(),
   });
-
-  const address = req.body.address.toLowerCase();
-  const path = req.body.path; // path of uploaded folder from root (this is used by the frontend)
-
-  // Get metadata for all Estuary pins before file upload
-  const pinsMetadataBefore = await estuaryWrapper.getPinsList();
-  if (!pinsMetadataBefore) {
-    console.log(`Failed to get pins for ${address}`);
-    await removeFiles(timestampedFolder);
-    return false;
-  }
 
   // Upload file
   console.log(`Uploading ${carFilename} to Estuary`);
@@ -150,59 +159,108 @@ const uploadFiles = async (req) => {
     return false;
   }
 
-  // Get metadata for all Estuary pins after file upload
-  const pinsMetadataAfter = await estuaryWrapper.getPinsList();
-  if (!pinsMetadataAfter) {
-    console.log(`Failed to get pins for ${address}`);
-    return false;
-  }
-  const newPinsMetadata = pinsMetadataAfter.filter(
-    ({ requestid: rid1 }) => !pinsMetadataBefore.some(({ requestid: rid2 }) => rid1 == rid2)
-  );
-  // Get metadata for the uploaded file
-  let newPinMetadata;
-  if (newPinsMetadata.length === 1) {
-    newPinMetadata = {
-      address: address,
-      filename: newPinsMetadata[0].filename,
-      cid: newPinsMetadata[0].cid,
-      requestid: newPinsMetadata[0].requestid,
-    };
-  } else {
-    console.log(`newPinsMetadata.length: ${newPinsMetadata.length}`);
-    console.log(
-      "uploadToEstuary: ERROR: Could not determine the cid, filename, and requestid for the " +
-        "uploaded file. Multiple files might have been uploaded at nearly the same time, causing this ambiguity."
-    );
+  const pinsList = await estuaryWrapper.getPinsList();
+  if (!pinsList) {
+    console.log(`Failed to get pins from Estuary`);
+    await removeFiles(timestampedFolder);
     return false;
   }
 
-  const fileMetadata = await dbWrapper.selectFile(["cid", "address"], [newPinMetadata["cid"], address]);
-  if (fileMetadata) {
-    console.log("User has already uploaded this file");
-    // Delete from Estuary
-    let numAttempts = 0;
-    while (numAttempts < 5) {
-      try {
-        const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${newPinMetadata["requestid"]}`, {
-          headers: {
-            Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
-          },
-        });
-        break;
-      } catch (err) {
-        console.log(err);
-        numAttempts++;
-      }
+  // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
+  const pinsWithThisFileName = pinsList.filter((pin) => pin.pin.name == `${userDefinedRootDir}.car`);
+  for (const pin of pinsWithThisFileName) {
+    const fileMetadataRows = await dbWrapper.selectFiles(["carcid", "address"], [pin.pin.cid, address]);
+    if (fileMetadataRows.length > 0) {
+      console.log("User has already uploaded this file");
+      await removeFiles(timestampedFolder);
+      await estuaryWrapper.deleteFile(newPinMetadata["requestid"]);
+      return false;
     }
-    return false;
-  } else {
-    const columns = "(address, filename, path, cid, requestid)";
-    const params = [address, newPinMetadata["filename"], path, newPinMetadata["cid"], newPinMetadata["requestid"]];
+  }
+
+  // Insert a row of metadata for every file in the uploaded directory
+  const newUploadRequestId = Math.max(...pinsWithThisFileName.map((pin) => pin.requestid));
+  const newPinMetadata = pinsWithThisFileName.filter((pin) => pin.requestid == newUploadRequestId);
+  for (const file of files) {
+    const columns = "(address, filename, path, carcid, requestid)";
+    const params = [address, file.filename, file.userDefinedPath, newPinMetadata.pin.cid, newPinMetadata.requestid];
     console.log(`uploadFile: Inserting row into files: columns: ${columns} params: ${params}`);
     dbWrapper.runSql(`INSERT INTO files ${columns} VALUES (?, ?, ?, ?, ?)`, params);
   }
+
   return true;
+
+  // // Get metadata for all Estuary pins before file upload
+  // const pinsMetadataBefore = await estuaryWrapper.getPinsList();
+  // if (!pinsMetadataBefore) {
+  //   console.log(`Failed to get pins for ${address}`);
+  //   await removeFiles(timestampedFolder);
+  //   return false;
+  // }
+
+  // // Upload file
+  // console.log(`Uploading ${carFilename} to Estuary`);
+  // const file = fs.createReadStream(carFilename);
+  // const uploadSuccess = await estuaryWrapper.uploadFile(file, 3);
+  // await removeFiles(timestampedFolder);
+  // if (!uploadSuccess) {
+  //   console.log(`Failed to upload ${carFilename} to Estuary`);
+  //   return false;
+  // }
+
+  // // Get metadata for all Estuary pins after file upload
+  // const pinsMetadataAfter = await estuaryWrapper.getPinsList();
+  // if (!pinsMetadataAfter) {
+  //   console.log(`Failed to get pins for ${address}`);
+  //   return false;
+  // }
+  // const newPinsMetadata = pinsMetadataAfter.filter(
+  //   ({ requestid: rid1 }) => !pinsMetadataBefore.some(({ requestid: rid2 }) => rid1 == rid2)
+  // );
+  // // Get metadata for the uploaded file
+  // let newPinMetadata;
+  // if (newPinsMetadata.length === 1) {
+  //   newPinMetadata = {
+  //     address: address,
+  //     filename: newPinsMetadata[0].filename,
+  //     cid: newPinsMetadata[0].cid,
+  //     requestid: newPinsMetadata[0].requestid,
+  //   };
+  // } else {
+  //   console.log(`newPinsMetadata.length: ${newPinsMetadata.length}`);
+  //   console.log(
+  //     "uploadToEstuary: ERROR: Could not determine the cid, filename, and requestid for the " +
+  //       "uploaded file. Multiple files might have been uploaded at nearly the same time, causing this ambiguity."
+  //   );
+  //   return false;
+  // }
+
+  // const fileMetadata = await dbWrapper.selectFile(["cid", "address"], [newPinMetadata["cid"], address]);
+  // if (fileMetadata) {
+  //   console.log("User has already uploaded this file");
+  //   // Delete from Estuary
+  //   let numAttempts = 0;
+  //   while (numAttempts < 5) {
+  //     try {
+  //       const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${newPinMetadata["requestid"]}`, {
+  //         headers: {
+  //           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+  //         },
+  //       });
+  //       break;
+  //     } catch (err) {
+  //       console.log(err);
+  //       numAttempts++;
+  //     }
+  //   }
+  //   return false;
+  // } else {
+  //   const columns = "(address, filename, path, cid, requestid)";
+  //   const params = [address, newPinMetadata["filename"], path, newPinMetadata["cid"], newPinMetadata["requestid"]];
+  //   console.log(`uploadFile: Inserting row into files: columns: ${columns} params: ${params}`);
+  //   dbWrapper.runSql(`INSERT INTO files ${columns} VALUES (?, ?, ?, ?, ?)`, params);
+  // }
+  // return true;
 };
 
 module.exports = {

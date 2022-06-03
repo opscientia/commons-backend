@@ -22,9 +22,7 @@ module.exports.getPinsList = async () => {
   return undefined;
 };
 
-module.exports.uploadFile = async (file, maxAttempts) => {
-  if (!maxAttempts) maxAttempts = 1;
-
+module.exports.uploadFile = async (file, maxAttempts = 3) => {
   const formData = new FormData();
   formData.append("data", file);
 
@@ -36,11 +34,30 @@ module.exports.uploadFile = async (file, maxAttempts) => {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
         },
       });
+      console.log("uploadFile response:");
+      console.log(resp);
       return true;
     } catch (err) {
       numAttempts++;
-      console.log(`Code: ${err.code}. Message: ${err.message}`);
+      console.log(`Error code: ${err.code}. Error message: ${err.message}`);
     }
   }
   return false;
+};
+
+module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
+  let numAttempts = 0;
+  while (numAttempts < maxAttempts) {
+    try {
+      const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${requestid}`, {
+        headers: {
+          Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+        },
+      });
+      break;
+    } catch (err) {
+      numAttempts++;
+      console.log(`Error code: ${err.code}. Error message: ${err.message}`);
+    }
+  }
 };
