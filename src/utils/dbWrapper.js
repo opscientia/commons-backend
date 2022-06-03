@@ -50,7 +50,7 @@ module.exports.getAllUsers = () => {
  * Select from files table where column_i=value_i.
  * @returns Row in files table if file exists, null otherwise. Returns first item that matches query.
  */
-module.exports.selectFile = (columns, values) => {
+module.exports.selectFiles = (columns, values) => {
   if (columns.length !== values.length) {
     throw new Error("dbWrapper.selectFile: columns.length must equal values.length");
   }
