@@ -51,7 +51,7 @@ module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
         },
       });
-      break;
+      return true;
     } catch (err) {
       numAttempts++;
       console.log(`Error code: ${err.code}. Error message: ${err.message}`);

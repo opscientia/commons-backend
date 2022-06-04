@@ -60,26 +60,7 @@ const deleteFileMetadata = async (req) => {
     const params = [address, requestid];
     console.log(`deleteFileMetadata: Deleting row in files that has the following address and requestid: ${params}`);
     dbWrapper.runSql(`DELETE FROM files WHERE address=? AND requestid=?`, params);
-    let success = true;
-    let numAttempts = 0;
-    while (numAttempts < 5) {
-      try {
-        const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${requestid}`, {
-          headers: {
-            Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
-          },
-        });
-        const data = resp.data;
-        console.log(`deleteFileMetadata: Successfully submitted delete request to Estuary for file with requestid ${requestid}`);
-        break;
-      } catch (err) {
-        console.log(err);
-        console.log(`deleteFileMetadata: Failed to submit delete request to Estuary for file with requestid ${requestid}`);
-        success = false;
-        numAttempts++;
-      }
-    }
-    return success;
+    return await estuaryWrapper.deleteFile(requestid, 5);
   }
   return false;
 };
