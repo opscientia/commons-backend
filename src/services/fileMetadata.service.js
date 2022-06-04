@@ -3,6 +3,7 @@ const axios = require("axios");
 const web3 = require("web3");
 const { ethers } = require("ethers");
 const dbWrapper = require("../utils/dbWrapper");
+const estuaryWrapper = require("../utils/estuaryWrapper");
 
 /**
  * Get file metadata for every file belonging to the specified address.
