@@ -75,7 +75,7 @@ const runInitialInputValidation = async (req) => {
   }
   try {
     const user = await dbWrapper.getUserByAddress(address);
-    if (user.uploadlimit <= 0) {
+    if (user?.uploadlimit <= 0) {
       console.log(`User ${user.address} isn't on whitelist`);
       console.log(user);
       await removeFiles(req.files[0].destination);
@@ -152,115 +152,32 @@ const uploadFiles = async (req) => {
   // Upload file
   console.log(`Uploading ${carFilename} to Estuary`);
   const file = fs.createReadStream(carFilename);
-  const uploadSuccess = await estuaryWrapper.uploadFile(file, 3);
+  const uploadResp = await estuaryWrapper.uploadFile(file, 3);
   await removeFiles(timestampedFolder);
-  if (!uploadSuccess) {
+  if (!uploadResp) {
     console.log(`Failed to upload ${carFilename} to Estuary`);
     return false;
   }
+  const newUploadCid = uploadResp.cid;
+  const newUploadRequestId = uploadResp.estuaryId;
 
-  const pinsList = await estuaryWrapper.getPinsList();
-  if (!pinsList) {
-    console.log(`Failed to get pins from Estuary`);
-    await removeFiles(timestampedFolder);
+  // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
+  const fileMetadataRows = await dbWrapper.selectFiles(["carcid", "address"], [newUploadCid, address]);
+  if (fileMetadataRows.length > 0) {
+    console.log("User has already uploaded this file");
+    await estuaryWrapper.deleteFile(newUploadRequestId);
     return false;
   }
 
-  // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
-  const pinsWithThisFileName = pinsList.filter((pin) => pin.pin.name == `${userDefinedRootDir}.car`);
-  for (const pin of pinsWithThisFileName) {
-    const fileMetadataRows = await dbWrapper.selectFiles(["carcid", "address"], [pin.pin.cid, address]);
-    if (fileMetadataRows.length > 0) {
-      console.log("User has already uploaded this file");
-      await removeFiles(timestampedFolder);
-      await estuaryWrapper.deleteFile(newPinMetadata["requestid"]);
-      return false;
-    }
-  }
-
   // Insert a row of metadata for every file in the uploaded directory
-  const newUploadRequestId = Math.max(...pinsWithThisFileName.map((pin) => pin.requestid));
-  const newPinMetadata = pinsWithThisFileName.filter((pin) => pin.requestid == newUploadRequestId);
   for (const file of files) {
     const columns = "(address, filename, path, carcid, requestid)";
-    const params = [address, file.filename, file.userDefinedPath, newPinMetadata.pin.cid, newPinMetadata.requestid];
+    const params = [address, file.filename, file.userDefinedPath, newUploadCid, newUploadRequestId];
     console.log(`uploadFile: Inserting row into files: columns: ${columns} params: ${params}`);
     dbWrapper.runSql(`INSERT INTO files ${columns} VALUES (?, ?, ?, ?, ?)`, params);
   }
 
   return true;
-
-  // // Get metadata for all Estuary pins before file upload
-  // const pinsMetadataBefore = await estuaryWrapper.getPinsList();
-  // if (!pinsMetadataBefore) {
-  //   console.log(`Failed to get pins for ${address}`);
-  //   await removeFiles(timestampedFolder);
-  //   return false;
-  // }
-
-  // // Upload file
-  // console.log(`Uploading ${carFilename} to Estuary`);
-  // const file = fs.createReadStream(carFilename);
-  // const uploadSuccess = await estuaryWrapper.uploadFile(file, 3);
-  // await removeFiles(timestampedFolder);
-  // if (!uploadSuccess) {
-  //   console.log(`Failed to upload ${carFilename} to Estuary`);
-  //   return false;
-  // }
-
-  // // Get metadata for all Estuary pins after file upload
-  // const pinsMetadataAfter = await estuaryWrapper.getPinsList();
-  // if (!pinsMetadataAfter) {
-  //   console.log(`Failed to get pins for ${address}`);
-  //   return false;
-  // }
-  // const newPinsMetadata = pinsMetadataAfter.filter(
-  //   ({ requestid: rid1 }) => !pinsMetadataBefore.some(({ requestid: rid2 }) => rid1 == rid2)
-  // );
-  // // Get metadata for the uploaded file
-  // let newPinMetadata;
-  // if (newPinsMetadata.length === 1) {
-  //   newPinMetadata = {
-  //     address: address,
-  //     filename: newPinsMetadata[0].filename,
-  //     cid: newPinsMetadata[0].cid,
-  //     requestid: newPinsMetadata[0].requestid,
-  //   };
-  // } else {
-  //   console.log(`newPinsMetadata.length: ${newPinsMetadata.length}`);
-  //   console.log(
-  //     "uploadToEstuary: ERROR: Could not determine the cid, filename, and requestid for the " +
-  //       "uploaded file. Multiple files might have been uploaded at nearly the same time, causing this ambiguity."
-  //   );
-  //   return false;
-  // }
-
-  // const fileMetadata = await dbWrapper.selectFile(["cid", "address"], [newPinMetadata["cid"], address]);
-  // if (fileMetadata) {
-  //   console.log("User has already uploaded this file");
-  //   // Delete from Estuary
-  //   let numAttempts = 0;
-  //   while (numAttempts < 5) {
-  //     try {
-  //       const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${newPinMetadata["requestid"]}`, {
-  //         headers: {
-  //           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
-  //         },
-  //       });
-  //       break;
-  //     } catch (err) {
-  //       console.log(err);
-  //       numAttempts++;
-  //     }
-  //   }
-  //   return false;
-  // } else {
-  //   const columns = "(address, filename, path, cid, requestid)";
-  //   const params = [address, newPinMetadata["filename"], path, newPinMetadata["cid"], newPinMetadata["requestid"]];
-  //   console.log(`uploadFile: Inserting row into files: columns: ${columns} params: ${params}`);
-  //   dbWrapper.runSql(`INSERT INTO files ${columns} VALUES (?, ?, ?, ?, ?)`, params);
-  // }
-  // return true;
 };
 
 module.exports = {

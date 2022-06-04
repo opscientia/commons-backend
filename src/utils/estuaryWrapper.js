@@ -34,15 +34,12 @@ module.exports.uploadFile = async (file, maxAttempts = 3) => {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
         },
       });
-      console.log("uploadFile response:");
-      console.log(resp);
-      return true;
+      return resp.data;
     } catch (err) {
       numAttempts++;
       console.log(`Error code: ${err.code}. Error message: ${err.message}`);
     }
   }
-  return false;
 };
 
 module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
