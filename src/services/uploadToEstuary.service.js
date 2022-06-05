@@ -9,18 +9,9 @@ const { packToFs } = require("ipfs-car/pack/fs");
 const { FsBlockStore } = require("ipfs-car/blockstore/fs");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
+const utils = require("../utils/utils");
 
 const validate = require("bids-validator");
-
-const removeFiles = async (pathToFiles) => {
-  if (pathToFiles == "estuaryUploads/") return;
-  try {
-    await fse.remove(pathToFiles);
-    console.log(`Removed ${pathToFiles}`);
-  } catch (err) {
-    console.error(err);
-  }
-};
 
 const runBidsValidation = async (pathToDirectory) => {
   return new Promise((resolve) => {
@@ -54,12 +45,12 @@ const runBidsValidation = async (pathToDirectory) => {
 const runInitialInputValidation = async (req) => {
   if (!req.body.address || !req.files || !req.body.signature) {
     console.log("Missing argument");
-    await removeFiles(req.files[0].destination);
+    await utils.removeFiles(req.files[0].destination);
     return false;
   }
   if (req.body.address.length != 42 || req.body.address.substring(0, 2) != "0x") {
     console.log("Invalid address");
-    await removeFiles(req.files[0].destination);
+    await utils.removeFiles(req.files[0].destination);
     return false;
   }
   const address = req.body.address.toLowerCase();
@@ -70,7 +61,7 @@ const runInitialInputValidation = async (req) => {
     console.log("signer != address");
     console.log(`signer:  ${signer}`);
     console.log(`address: ${address}`);
-    await removeFiles(req.files[0].destination);
+    await utils.removeFiles(req.files[0].destination);
     return false;
   }
   try {
@@ -78,12 +69,12 @@ const runInitialInputValidation = async (req) => {
     if (user?.uploadlimit <= 0) {
       console.log(`User ${user.address} isn't on whitelist`);
       console.log(user);
-      await removeFiles(req.files[0].destination);
+      await utils.removeFiles(req.files[0].destination);
       return false;
     }
   } catch (err) {
     console.log(err);
-    await removeFiles(req.files[0].destination);
+    await utils.removeFiles(req.files[0].destination);
     return false;
   }
   return true;
@@ -127,7 +118,7 @@ const uploadFiles = async (req) => {
 
   const files = await moveFilesToCorrectFolders(req);
   if (files.length == 0) {
-    await removeFiles(timestampedFolder);
+    await utils.removeFiles(timestampedFolder);
     return false;
   }
 
@@ -139,7 +130,7 @@ const uploadFiles = async (req) => {
 
   const validBids = await runBidsValidation(userDefinedRootDirLocal);
   if (!validBids) {
-    await removeFiles(timestampedFolder);
+    await utils.removeFiles(timestampedFolder);
     return false;
   }
 
@@ -153,7 +144,7 @@ const uploadFiles = async (req) => {
   console.log(`Uploading ${carFilename} to Estuary`);
   const file = fs.createReadStream(carFilename);
   const uploadResp = await estuaryWrapper.uploadFile(file, 3);
-  await removeFiles(timestampedFolder);
+  await utils.removeFiles(timestampedFolder);
   if (!uploadResp) {
     console.log(`Failed to upload ${carFilename} to Estuary`);
     return false;

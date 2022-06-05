@@ -1,9 +1,15 @@
 const express = require("express");
 const axios = require("axios");
+const fse = require("fs-extra");
 const web3 = require("web3");
 const { ethers } = require("ethers");
+const { packToFs } = require("ipfs-car/pack/fs");
+const { FsBlockStore } = require("ipfs-car/blockstore/fs");
+const { unpackToFs } = require("ipfs-car/unpack/fs");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
+const utils = require("../utils/utils");
+const { fetchJson } = require("ethers/lib/utils");
 
 /**
  * Get file metadata for every file belonging to the specified address.
@@ -23,7 +29,9 @@ const getFileMetadata = async (req) => {
 };
 
 /**
- * Delete file by address && requestid.
+ * Delete file by address && requestid && (optionally) path.
+ * If path is specified, only the file designated by path is deleted. If path is not specified,
+ * the entire CAR file designated by requestid is deleted.
  * Example:
  * curl -X DELETE http://localhost:3005/fileMetadata?address=address=0x0000000000000000000000000000000000000000&requestid=123
  */
@@ -37,10 +45,12 @@ const deleteFileMetadata = async (req) => {
   }
   const address = req.query.address.toLowerCase();
   const requestid = parseInt(req.query.requestid);
+  const path = req.query.path;
   const signature = req.query.signature;
 
   // Ensure signer == address == address associated with this requestid
-  const strToSign = `/fileMetadata?address=${req.query.address}&requestid=${requestid}`;
+  let strToSign = `/fileMetadata?address=${req.query.address}&requestid=${requestid}`;
+  if (path) strToSign += `&path=${path}`;
   const hashedStr = web3.utils.sha3(strToSign);
   let signer;
   try {
@@ -56,8 +66,39 @@ const deleteFileMetadata = async (req) => {
     console.log(`deleteFileMetadata: address: ${address}`);
     return false;
   }
-  const file = await dbWrapper.selectFile(["requestid", "address"], [requestid, address]);
-  if (file) {
+  // If the user isn't deleting the whole directory, delete only the file designated by path.
+  if (path) {
+    const file = await dbWrapper.selectFile(["requestid", "path", "address"], [requestid, path, address]);
+    if (!file) return false;
+    try {
+      // Get and unpack CAR
+      const fileDest = `estuaryUploads/${file.carcid + Date.now()}.car`;
+      const unpackedCarDest = fileDest.slice(0, -4);
+      await utils.downloadFile(`https://ipfs.io/ipfs/${file.carcid}`, fileDest);
+      await unpackToFs({ input: fileDest, output: unpackedCarDest });
+      // Delete file designated by path
+      await fse.remove(`${unpackedCarDest}/${path}`);
+      // Pack back into CAR and upload updated CAR
+      const uploadResp = await estuaryWrapper.uploadDirAsCar(unpackedCarDest, fileDest);
+      const newUploadCid = uploadResp.cid;
+      const newUploadRequestId = uploadResp.estuaryId;
+      await utils.removeFiles(unpackedCarDest);
+      // Remove deleted file from db. Do this after re-upload so that db is only updated after successful upload
+      let params = [address, path, requestid];
+      console.log(`deleteFileMetadata: Deleting row in files that has the following address, path, and requestid: ${params}`);
+      dbWrapper.runSql(`DELETE FROM files WHERE address=? AND path=? AND requestid=?`, params);
+      // Update carcid and requestid for every file in the updated CAR
+      const columns = "carcid=?, requestid=?";
+      params = [newUploadCid, newUploadRequestId, file.carcid, address];
+      await dbWrapper.runSql(`UPDATE files SET ${columns} WHERE carcid=? AND address=?`, params);
+      return true;
+    } catch (err) {
+      console.log(err);
+      return false;
+    }
+  } else {
+    const file = await dbWrapper.selectFile(["requestid", "address"], [requestid, address]);
+    if (!file) return false;
     const params = [address, requestid];
     console.log(`deleteFileMetadata: Deleting row in files that has the following address and requestid: ${params}`);
     dbWrapper.runSql(`DELETE FROM files WHERE address=? AND requestid=?`, params);
