@@ -83,6 +83,7 @@ const deleteFileMetadata = async (req) => {
       const newUploadCid = uploadResp.cid;
       const newUploadRequestId = uploadResp.estuaryId;
       await utils.removeFiles(unpackedCarDest);
+      await estuaryWrapper.deleteFile(requestid, 3);
       // Remove deleted file from db. Do this after re-upload so that db is only updated after successful upload
       let params = [address, path, requestid];
       console.log(`deleteFileMetadata: Deleting row in files that has the following address, path, and requestid: ${params}`);
@@ -90,6 +91,7 @@ const deleteFileMetadata = async (req) => {
       // Update carcid and requestid for every file in the updated CAR
       const columns = "carcid=?, requestid=?";
       params = [newUploadCid, newUploadRequestId, file.carcid, address];
+      console.log(`deleteFileMetadata: Updating row in files with columns: ${columns} and params: ${params}`);
       await dbWrapper.runSql(`UPDATE files SET ${columns} WHERE carcid=? AND address=?`, params);
       return true;
     } catch (err) {
@@ -104,7 +106,6 @@ const deleteFileMetadata = async (req) => {
     dbWrapper.runSql(`DELETE FROM files WHERE address=? AND requestid=?`, params);
     return await estuaryWrapper.deleteFile(requestid, 5);
   }
-  return false;
 };
 
 // TODO: Either delete this or only allow the filename to be changed. requestid should NOT be changed.
