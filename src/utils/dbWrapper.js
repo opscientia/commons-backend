@@ -58,8 +58,6 @@ module.exports.selectFile = (columns, values) => {
     throw new Error("dbWrapper.selectFile: columns.length and values.length must be greater than 0");
   }
   const columnsStr = columns.join("=? AND ") + "=?";
-  console.log(columnsStr);
-  console.log(values);
   // values = values.length === 1 ? values[0] : values;
   return new Promise((resolve, reject) => {
     db.get(`SELECT * FROM files WHERE ${columnsStr}`, values, (err, row) => {
