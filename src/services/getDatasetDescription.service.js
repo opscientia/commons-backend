@@ -65,6 +65,16 @@ const getDatasetDescription = async (req) => {
       return undefined;
     }
 
+    // Ensure file isn't large
+    try {
+      const stats = fs.statSync(filepath);
+      // 1000 == 1 KB // 1024000 == 1 MB
+      if (stats.size > 1000) {
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
     // Read and return dataset description
     const datasetDescription = fse.readJsonSync(filepath, { throws: false });
     await utils.removeFiles(tempFolder);
