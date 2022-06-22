@@ -53,30 +53,6 @@ const runInitialInputValidation = async (req) => {
     await utils.removeFiles(req.files[0].destination);
     return false;
   }
-  const address = req.body.address.toLowerCase();
-  const fileAsString = fs.readFileSync(req.files[0].path, "utf8");
-  const fileHash = web3.utils.sha3(fileAsString);
-  const signer = (await ethers.utils.recoverAddress(fileHash, req.body.signature)).toLowerCase();
-  if (signer != address) {
-    console.log("signer != address");
-    console.log(`signer:  ${signer}`);
-    console.log(`address: ${address}`);
-    await utils.removeFiles(req.files[0].destination);
-    return false;
-  }
-  try {
-    const user = await dbWrapper.getUserByAddress(address);
-    if (user?.uploadlimit <= 0) {
-      console.log(`User ${user.address} isn't on whitelist`);
-      console.log(user);
-      await utils.removeFiles(req.files[0].destination);
-      return false;
-    }
-  } catch (err) {
-    console.log(err);
-    await utils.removeFiles(req.files[0].destination);
-    return false;
-  }
   return true;
 };
 
