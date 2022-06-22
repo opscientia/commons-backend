@@ -70,6 +70,7 @@ const getDatasetDescription = async (req) => {
       const stats = fs.statSync(filepath);
       // 1000 == 1 KB // 1024000 == 1 MB
       if (stats.size > 1000) {
+        return undefined;
       }
     } catch (err) {
       console.error(err);
