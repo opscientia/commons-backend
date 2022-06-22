@@ -94,7 +94,7 @@ const uploadFiles = async (req) => {
 
   const files = await moveFilesToCorrectFolders(req);
   if (files.length == 0) {
-    await utils.removeFiles(timestampedFolder);
+    await utils.removeFiles(req.files[0].destination);
     return false;
   }
 
