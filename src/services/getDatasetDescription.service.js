@@ -65,7 +65,7 @@ const getDatasetDescription = async (req) => {
       return undefined;
     }
 
-    // Ensure file isn't large
+    // Ensure description file isn't large
     try {
       const stats = fs.statSync(filepath);
       // 1000 == 1 KB // 1024000 == 1 MB
