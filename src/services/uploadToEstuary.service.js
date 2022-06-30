@@ -7,6 +7,7 @@ const web3 = require("web3");
 const { ethers } = require("ethers");
 const { packToFs } = require("ipfs-car/pack/fs");
 const { FsBlockStore } = require("ipfs-car/blockstore/fs");
+const { msgCache } = require("../init");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 const utils = require("../utils/utils");
@@ -54,9 +55,10 @@ const runInitialInputValidation = async (req) => {
     return false;
   }
   const address = req.body.address.toLowerCase();
-  const fileAsString = fs.readFileSync(req.files[0].path, "utf8");
-  const fileHash = web3.utils.sha3(fileAsString);
-  const signer = (await ethers.utils.recoverAddress(fileHash, req.body.signature)).toLowerCase();
+  const secretMessage = msgCache.take(address);
+  if (!secretMessage) return false;
+  const msgHash = web3.utils.sha3(secretMessage);
+  const signer = (await ethers.utils.recoverAddress(msgHash, req.body.signature)).toLowerCase();
   if (signer != address) {
     console.log("signer != address");
     console.log(`signer:  ${signer}`);
@@ -100,6 +102,10 @@ const moveFilesToCorrectFolders = async (req) => {
   const files = [];
   const timestampedFolder = req.files[0].destination;
   for (const file of req.files) {
+    if (typeof req.body[file.originalname] != "string") {
+      console.log("error: typeof req.body[file.originalname] != string");
+      return false;
+    }
     const userDefinedPath = req.body[file.originalname].startsWith("/")
       ? req.body[file.originalname].substring(1)
       : req.body[file.originalname];
