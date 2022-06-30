@@ -56,7 +56,11 @@ const runInitialInputValidation = async (req) => {
   }
   const address = req.body.address.toLowerCase();
   const secretMessage = msgCache.take(address);
-  if (!secretMessage) return false;
+  if (!secretMessage) {
+    console.log(`No secret message for ${address} at time ${Date.now()}`);
+    await utils.removeFiles(req.files[0].destination);
+    return false;
+  }
   const msgHash = web3.utils.sha3(secretMessage);
   const signer = (await ethers.utils.recoverAddress(msgHash, req.body.signature)).toLowerCase();
   if (signer != address) {
@@ -86,11 +90,15 @@ const runInitialInputValidation = async (req) => {
     const resp = await axios.get("https://sciverse.id/api/getAllUserAddresses");
     const holoAddresses = resp.data;
     if (!holoAddresses.includes(address)) {
+      console.log("User is not authorized to upload. They do not have a Holo.");
+      await utils.removeFiles(req.files[0].destination);
       return false;
     }
   } catch (err) {
     console.log("User is not authorized to upload. They do not have a Holo.");
     console.log(err);
+    await utils.removeFiles(req.files[0].destination);
+    return false;
   }
 
   return true;
@@ -138,13 +146,18 @@ const uploadFiles = async (req) => {
 
   const files = await moveFilesToCorrectFolders(req);
   if (files.length == 0) {
+    console.log("uploadFiles: Files could not be organized into their proper directories");
     await utils.removeFiles(req.files[0].destination);
     return false;
   }
 
   const timestampedFolder = req.files[0].destination;
   const dirChildren = fs.readdirSync(timestampedFolder);
-  if (dirChildren.length != 1) return false;
+  if (dirChildren.length != 1) {
+    console.log("uploadFiles: Files could not be organized into their proper directories");
+    await utils.removeFiles(req.files[0].destination);
+    return false;
+  }
   const userDefinedRootDir = dirChildren[0];
   const userDefinedRootDirLocal = `${timestampedFolder}/${userDefinedRootDir}/`;
 
