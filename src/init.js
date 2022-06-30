@@ -1,5 +1,8 @@
 const sqlite3 = require("sqlite3").verbose();
+const NodeCache = require("node-cache");
 require("dotenv").config();
+
+const msgCache = new NodeCache({ stdTTL: 300, checkperiod: 100 });
 
 let database = null;
 if (process.env.USE_TEST_DB == "true") {
@@ -22,4 +25,5 @@ db.serialize(() => {
 
 module.exports = {
   db: db,
+  msgCache: msgCache,
 };

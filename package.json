@@ -1,5 +1,5 @@
 {
-  "name": "opsci-commons-rbac",
+  "name": "opsci-commons-proxy",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -16,6 +16,7 @@
     "helmet": "^4.2.0",
     "ipfs-car": "^0.7.0",
     "multer": "^1.4.4",
+    "node-cache": "^5.1.2",
     "sqlite3": "^5.0.4",
     "web3": "^1.7.3"
   },
