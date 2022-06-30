@@ -64,19 +64,33 @@ const runInitialInputValidation = async (req) => {
     await utils.removeFiles(req.files[0].destination);
     return false;
   }
+  // Check whitelist
+  // try {
+  //   const user = await dbWrapper.getUserByAddress(address);
+  //   if (user?.uploadlimit <= 0) {
+  //     console.log(`User ${user.address} isn't on whitelist`);
+  //     console.log(user);
+  //     await utils.removeFiles(req.files[0].destination);
+  //     return false;
+  //   }
+  // } catch (err) {
+  //   console.log(err);
+  //   await utils.removeFiles(req.files[0].destination);
+  //   return false;
+  // }
+
+  // Check that user has Holo
   try {
-    const user = await dbWrapper.getUserByAddress(address);
-    if (user?.uploadlimit <= 0) {
-      console.log(`User ${user.address} isn't on whitelist`);
-      console.log(user);
-      await utils.removeFiles(req.files[0].destination);
+    const resp = await axios.get("https://sciverse.id/api/getAllUserAddresses");
+    const holoAddresses = resp.data;
+    if (!holoAddresses.includes(address)) {
       return false;
     }
   } catch (err) {
+    console.log("User is not authorized to upload. They do not have a Holo.");
     console.log(err);
-    await utils.removeFiles(req.files[0].destination);
-    return false;
   }
+
   return true;
 };
 
@@ -118,7 +132,7 @@ const uploadFiles = async (req) => {
 
   const files = await moveFilesToCorrectFolders(req);
   if (files.length == 0) {
-    await utils.removeFiles(timestampedFolder);
+    await utils.removeFiles(req.files[0].destination);
     return false;
   }
 
