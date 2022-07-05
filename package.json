@@ -15,10 +15,12 @@
     "fs-extra": "^10.1.0",
     "helmet": "^4.2.0",
     "ipfs-car": "^0.7.0",
+    "mongodb": "^4.7.0",
     "multer": "^1.4.4",
     "node-cache": "^5.1.2",
     "sqlite3": "^5.0.4",
-    "web3": "^1.7.3"
+    "web3": "^1.7.3",
+    "yup": "^0.32.11"
   },
   "scripts": {
     "test": "npx mocha",
