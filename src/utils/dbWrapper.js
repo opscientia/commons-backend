@@ -166,7 +166,7 @@ module.exports.updateCommonsFile = async (query, updateDocument) => {
  * @param query The query document to use for the MongoDB query
  * @param collectionName The name of the MongoDB collection to insert the item into
  */
-const deleteItem = async (query, collectionName) => {
+const deleteOneItem = async (query, collectionName) => {
   let success;
   try {
     await mongoClient.connect();
@@ -187,7 +187,7 @@ const deleteItem = async (query, collectionName) => {
  * @param query The query document to use for the MongoDB query
  */
 module.exports.deleteDataset = async (query) => {
-  return await deleteItem(query, dsCollectionName);
+  return await deleteOneItem(query, dsCollectionName);
 };
 
 /**
@@ -195,13 +195,58 @@ module.exports.deleteDataset = async (query) => {
  * @param query The query document to use for the MongoDB query
  */
 module.exports.deleteChunk = async (query) => {
-  return await deleteItem(query, chunkCollectionName);
+  return await deleteOneItem(query, chunkCollectionName);
 };
 
 /**
- * Delete file metadata the first (commonsFile) object matching query.
+ * Delete the first file metadata (commonsFile) object matching query.
  * @param query The query document to use for the MongoDB query
  */
 module.exports.deleteCommonsFile = async (query) => {
-  return await deleteItem(query, fileCollectionName);
+  return await deleteOneItem(query, fileCollectionName);
+};
+
+/**
+ * Delete the first item that matches the query.
+ * @param query The query document to use for the MongoDB query
+ * @param collectionName The name of the MongoDB collection to insert the item into
+ */
+const deleteManyItems = async (query, collectionName) => {
+  let success;
+  try {
+    await mongoClient.connect();
+    const db = mongoClient.db(mongoDbName);
+    const collection = db.collection(collectionName);
+    const result = await collection.deleteMany(query);
+    if (result.deletedCount > 0) success = true;
+  } catch (err) {
+    console.log(err);
+  } finally {
+    await mongoClient.close();
+  }
+  return success;
+};
+
+/**
+ * Delete dataset metadata objects matching query.
+ * @param query The query document to use for the MongoDB query
+ */
+module.exports.deleteDatasets = async (query) => {
+  return await deleteManyItems(query, dsCollectionName);
+};
+
+/**
+ * Delete chunk metadata objects matching query.
+ * @param query The query document to use for the MongoDB query
+ */
+module.exports.deleteChunks = async (query) => {
+  return await deleteManyItems(query, chunkCollectionName);
+};
+
+/**
+ * Delete file metadata (commonsFile) objects matching query.
+ * @param query The query document to use for the MongoDB query
+ */
+module.exports.deleteCommonsFiles = async (query) => {
+  return await deleteManyItems(query, fileCollectionName);
 };
