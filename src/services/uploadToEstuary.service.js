@@ -14,10 +14,6 @@ const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 const utils = require("../utils/utils");
 
-/**
- * TODO: Rewrite this module using the new MongoDB dbWrapper
- */
-
 const runBidsValidation = async (pathToDirectory) => {
   return new Promise((resolve) => {
     // const dirName = values.files[0].webkitRelativePath.split('/')[1]
