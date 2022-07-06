@@ -293,8 +293,7 @@ const uploadFiles = async (req) => {
   const newUploadRequestId = uploadResp.estuaryId;
 
   // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
-  const chunkDocumentsCursor = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
-  const matchingChunkDocuments = chunkDocumentsCursor.toArray();
+  const matchingChunkDocuments = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
   if (matchingChunkDocuments.length > 0) {
     console.log("User has already uploaded this file");
     await estuaryWrapper.deleteFile(newUploadRequestId);
