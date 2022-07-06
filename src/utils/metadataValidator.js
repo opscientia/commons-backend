@@ -61,6 +61,6 @@ module.exports.validateChunk = async (chunk) => {
   return await chunkSchema.isValid(chunk);
 };
 
-module.exports.validateFile = async (commonsFile) => {
+module.exports.validateCommonsFile = async (commonsFile) => {
   return await commonsFileSchema.isValid(commonsFile);
 };
