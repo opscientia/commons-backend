@@ -1,7 +1,6 @@
 const yup = require("yup");
 
 const datasetSchema = yup.object().shape({
-  id: yup.number().required().positive().integer(),
   title: yup.string(),
   description: yup.string(),
   authors: yup.array().of(yup.string()),
@@ -25,7 +24,6 @@ const bidsValidationSchema = yup.object().shape({
   errors: yup.string(),
 });
 const chunkSchema = yup.object().shape({
-  id: yup.number().required().positive().integer(),
   datasetId: yup.number().required().positive().integer(),
   path: yup.string(),
   doi: yup.string(),
@@ -45,7 +43,6 @@ const chunkSchema = yup.object().shape({
 });
 
 const commonsFileSchema = yup.object().shape({
-  id: yup.number().required().positive().integer(),
   chunkId: yup.number().required().positive().integer(),
   name: yup.string(),
   path: yup.string(),

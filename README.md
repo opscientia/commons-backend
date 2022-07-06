@@ -5,7 +5,7 @@ This server handles authentication and stores metadata for OpSci Commons.
 ## Metadata Schema
 
     dataset: {
-        id: number
+        // id: number // MongoDB creates an _id field upon insertion
         title: string
         description: string
         authors: string[]
@@ -19,7 +19,7 @@ This server handles authentication and stores metadata for OpSci Commons.
     }
 
     chunk: {
-        id: number
+        // id: number // MongoDB creates an _id field upon insertion
         datasetId: number // id of parent dataset
         path: string
         doi: string
@@ -42,7 +42,7 @@ This server handles authentication and stores metadata for OpSci Commons.
     }
 
     commonsFile: {
-        id: number
+        // id: number // MongoDB creates an _id field upon insertion
         chunkId: number // id of parent chunk
         name: string
         path: string
