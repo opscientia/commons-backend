@@ -23,11 +23,11 @@ This server handles authentication and stores metadata for OpSci Commons.
         datasetId: number // id of parent dataset
         path: string
         doi: string
-        storageIds: {cid: -cid-, estuaryId: -estuaryId-}
+        storageIds: {cid: -cid-, estuaryId: -estuaryId-} // estuaryId == Estuary's requestid
         files: number[] // array of commonsFileIds
         size: number
         standard: {
-            BIDS: {
+            bids: {
                 validated: boolean
                 version: string
                 deidentified: boolean
