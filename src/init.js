@@ -1,4 +1,5 @@
 const sqlite3 = require("sqlite3").verbose();
+const { MongoClient } = require("mongodb");
 const NodeCache = require("node-cache");
 require("dotenv").config();
 
@@ -23,7 +24,12 @@ db.serialize(() => {
   db.prepare(`CREATE TABLE IF NOT EXISTS files ${columns}`).run().finalize();
 });
 
+let url = `mongodb+srv://${process.env.MONGO_DB_USERNAME}:${process.env.MONGO_DB_PASSWORD}`;
+url += `@cluster0.gwjmf6s.mongodb.net/test?retryWrites=true&w=majority&useNewUrlParser=true&useUnifiedTopology=true`;
+const mongoClient = new MongoClient(url);
+
 module.exports = {
-  db: db,
+  // db: db,
+  mongoClient: mongoClient,
   msgCache: msgCache,
 };

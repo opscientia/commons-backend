@@ -12,6 +12,10 @@ const utils = require("../utils/utils");
 const { fetchJson } = require("ethers/lib/utils");
 
 /**
+ * TODO: Rewrite this module using the new MongoDB dbWrapper
+ */
+
+/**
  * Get file metadata for every file belonging to the specified address.
  * (Does not require authentication. Only modifications to a user's files require authentication.)
  * Examples:

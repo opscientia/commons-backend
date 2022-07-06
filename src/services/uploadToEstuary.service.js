@@ -5,6 +5,8 @@ const fse = require("fs-extra");
 const FormData = require("form-data");
 const web3 = require("web3");
 const { ethers } = require("ethers");
+const mongodb = require("mongodb");
+const validate = require("bids-validator");
 const { packToFs } = require("ipfs-car/pack/fs");
 const { FsBlockStore } = require("ipfs-car/blockstore/fs");
 const { msgCache } = require("../init");
@@ -12,7 +14,9 @@ const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 const utils = require("../utils/utils");
 
-const validate = require("bids-validator");
+/**
+ * TODO: Rewrite this module using the new MongoDB dbWrapper
+ */
 
 const runBidsValidation = async (pathToDirectory) => {
   return new Promise((resolve) => {
@@ -70,20 +74,6 @@ const runInitialInputValidation = async (req) => {
     await utils.removeFiles(req.files[0].destination);
     return false;
   }
-  // Check whitelist
-  // try {
-  //   const user = await dbWrapper.getUserByAddress(address);
-  //   if (user?.uploadlimit <= 0) {
-  //     console.log(`User ${user.address} isn't on whitelist`);
-  //     console.log(user);
-  //     await utils.removeFiles(req.files[0].destination);
-  //     return false;
-  //   }
-  // } catch (err) {
-  //   console.log(err);
-  //   await utils.removeFiles(req.files[0].destination);
-  //   return false;
-  // }
 
   // Check that user has Holo
   try {
@@ -121,13 +111,16 @@ const moveFilesToCorrectFolders = async (req) => {
       continue;
     }
     const newLocalFilePath = timestampedFolder + "/" + userDefinedPath;
+    file.currentLocalFilePath = file.path;
     file.localFilePath = newLocalFilePath;
     file.userDefinedPath = userDefinedPath;
-    file.filename = file.originalname;
+    file.name = file.originalname; // For new metadata
+    file.path = userDefinedPath; // For new metadata
+    file.documentation = ""; // For new metadata
     files.push(file);
 
     try {
-      await fse.move(file.path, newLocalFilePath);
+      await fse.move(file.currentLocalFilePath, newLocalFilePath);
     } catch (err) {
       console.log(err);
       return [];
@@ -136,7 +129,121 @@ const moveFilesToCorrectFolders = async (req) => {
   return files;
 };
 
+const generateCommonsFile = (file, chunkId) => {
+  return {
+    _id: mongodb.ObjectId(),
+    chunkId: chunkId,
+    name: file.name,
+    path: file.path,
+    size: file.size,
+    documentation: "",
+  };
+};
+
+/**
+ * @param params Object containing every value to store in the dataset object,
+ *        except "_id" and "published" which are populated by this function.
+ */
+const generateDataset = (params) => {
+  return {
+    _id: mongodb.ObjectId(),
+    title: params.userDefinedRootDir,
+    description: params.description, // TODO: Extract from dataset_description.json if it exists
+    authors: params.authors || [], // TODO: Extract from dataset_description.json if it exists
+    uploader: params.address,
+    license: params.license, // TODO: Extract from dataset_description.json if it exists
+    doi: params.doi, // TODO: Extract from dataset_description.json if it exists
+    keywords: params.keywords || [], // TODO: Extract from dataset_description.json if it exists
+    published: false,
+    size: params.size, // sumFileSizes,
+    chunks: params.chunks || [],
+  };
+};
+
+const generateChunk = (params) => {
+  return {
+    _id: mongodb.ObjectId(),
+    datasetId: params.datasetId,
+    path: params.path || "/",
+    doi: params.doi || "",
+    storageIds: { cid: params.storageIds.cid, estuaryId: params.storageIds.estuaryId },
+    files: params.files || [],
+    size: params.size,
+    standard: {
+      bids: {
+        validated: params.bids.validated || true,
+        version: params.bids.version || "1.9.3",
+        // TODO: Fill in the rest of this
+      },
+    },
+  };
+};
+
+/**
+ * Insert dataset metadata, chunk metadata, and file(s) metadata into database.
+ * @param datasetMetadata
+ * @param chunkMetadata
+ * @returns True if all db requests were acknowledged, false otherwise
+ */
+const insertMetadata = async (datasetMetadata, chunkMetadata) => {
+  let acknowledged, dataset, chunk;
+  // Max insert attempts. Try inserting multiple time in case of _id collision or other errors
+  const maxAttempts = 3;
+
+  // Dataset
+  for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
+    dataset = generateDataset({
+      title: datasetMetadata.title,
+      uploader: datasetMetadata.uploader,
+      size: datasetMetadata.size,
+    });
+    acknowledged = await dbWrapper.insertDataset(dataset);
+  }
+  if (!acknowledged) {
+    console.log("Request to insert dataset metadata was not acknowledged by database. Exiting.");
+    return false;
+  }
+
+  // Chunk
+  for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
+    chunk = generateChunk({
+      datasetId: dataset._id,
+      storageIds: chunkMetadata.storageIds,
+      size: chunkMetadata.size,
+    });
+    acknowledged = await dbWrapper.insertChunk(chunk);
+  }
+  if (!acknowledged) {
+    console.log("Request to insert chunk metadata was not acknowledged by database. Exiting.");
+    return false;
+  }
+
+  // commonsFiles
+  const fileIds = [];
+  for (const tmpFile of files) {
+    let commonsFile;
+    for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
+      commonsFile = generateCommonsFile(tmpFile, chunk._id);
+      acknowledged = await dbWrapper.insertCommonsFile(commonsFile);
+    }
+    if (!acknowledged) {
+      console.log("Request to insert commonsFile metadata was not acknowledged by database. Exiting.");
+      return false;
+    }
+    fileIds.push(commonsFile._id);
+  }
+  const queryFilter = { _id: chunk._id };
+  const updateDocument = { $set: { files: fileIds } };
+  const updateSuccess = await dbWrapper.updateChunk(queryFilter, updateDocument);
+  if (!updateSuccess) {
+    console.log("Failed to set chunk.files in database. Exiting.");
+  }
+  return updateSuccess;
+};
+
 const uploadFiles = async (req) => {
+  // TODO: chunking
+
   console.log("uploadFile: Entered");
   if (!(await runInitialInputValidation(req))) return false;
   console.log(req.files);
@@ -186,22 +293,38 @@ const uploadFiles = async (req) => {
   const newUploadRequestId = uploadResp.estuaryId;
 
   // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
-  const fileMetadataRows = await dbWrapper.selectFiles(["carcid", "address"], [newUploadCid, address]);
-  if (fileMetadataRows.length > 0) {
+  const chunkDocumentsCursor = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
+  const matchingChunkDocuments = chunkDocumentsCursor.toArray();
+  if (matchingChunkDocuments.length > 0) {
     console.log("User has already uploaded this file");
     await estuaryWrapper.deleteFile(newUploadRequestId);
     return false;
   }
 
-  // Insert a row of metadata for every file in the uploaded directory
-  for (const file of files) {
-    const columns = "(address, filename, path, carcid, requestid)";
-    const params = [address, file.filename, file.userDefinedPath, newUploadCid, newUploadRequestId];
-    console.log(`uploadFile: Inserting row into files: columns: ${columns} params: ${params}`);
-    dbWrapper.runSql(`INSERT INTO files ${columns} VALUES (?, ?, ?, ?, ?)`, params);
-  }
+  const sumFileSizes = files.map((file) => file.size).reduce((a, b) => a + b);
 
-  return true;
+  // Insert a row of metadata for every file in the uploaded directory
+  // for (const file of files) {
+  //   const columns = "(address, filename, path, carcid, requestid)";
+  //   const params = [address, file.name, file.userDefinedPath, newUploadCid, newUploadRequestId];
+  //   console.log(`uploadFile: Inserting row into files: columns: ${columns} params: ${params}`);
+  //   dbWrapper.runSql(`INSERT INTO files ${columns} VALUES (?, ?, ?, ?, ?)`, params);
+  // }
+  const datasetMetadata = {
+    title: userDefinedRootDir,
+    uploader: address,
+    size: sumFileSizes,
+  };
+  const chunkMetadata = {
+    storageIds: { cid: newUploadCid, estuaryId: newUploadRequestId },
+    size: sumFileSizes,
+  };
+  const insertSuccess = await insertMetadata(datasetMetadata, chunkMetadata);
+  if (!insertSuccess) {
+    console.log("Failed to upload metadata files to database. Removing file from Estuary and exiting.");
+    await estuaryWrapper.deleteFile(newUploadRequestId);
+  }
+  return insertSuccess;
 };
 
 module.exports = {

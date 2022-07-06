@@ -10,6 +10,10 @@ const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 const utils = require("../utils/utils");
 
+/**
+ * TODO: Rewrite this module using the new MongoDB dbWrapper
+ */
+
 const ensureDir = async (dir) => {
   try {
     await fse.ensureDir(dir);
