@@ -15,7 +15,7 @@ This server handles authentication and stores metadata for OpSci Commons.
         keywords: string[]
         published: boolean
         size: number
-        chunks: number[] // array of chunkIds
+        chunkIds: number[]
     }
 
     chunk: {
@@ -24,7 +24,7 @@ This server handles authentication and stores metadata for OpSci Commons.
         path: string
         doi: string
         storageIds: {cid: -cid-, estuaryId: -estuaryId-} // estuaryId == Estuary's requestid
-        files: number[] // array of commonsFileIds
+        fileIds: number[] // array of commonsFileIds
         size: number
         standard: {
             bids: {
