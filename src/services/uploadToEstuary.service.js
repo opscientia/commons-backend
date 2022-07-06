@@ -156,7 +156,7 @@ const generateDataset = (params) => {
     keywords: params.keywords || [], // TODO: Extract from dataset_description.json if it exists
     published: false,
     size: params.size, // sumFileSizes,
-    chunks: params.chunks || [],
+    chunks: params.chunkIds || [],
   };
 };
 
@@ -167,7 +167,7 @@ const generateChunk = (params) => {
     path: params.path || "/",
     doi: params.doi || "",
     storageIds: { cid: params.storageIds.cid, estuaryId: params.storageIds.estuaryId },
-    files: params.files || [],
+    fileIds: params.fileIds || [],
     size: params.size,
     standard: {
       bids: {
@@ -233,7 +233,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata) => {
     fileIds.push(commonsFile._id);
   }
   const queryFilter = { _id: chunk._id };
-  const updateDocument = { $set: { files: fileIds } };
+  const updateDocument = { $set: { fileIds: fileIds } };
   const updateSuccess = await dbWrapper.updateChunk(queryFilter, updateDocument);
   if (!updateSuccess) {
     console.log("Failed to set chunk.files in database. Exiting.");
