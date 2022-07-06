@@ -10,10 +10,6 @@ const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 const utils = require("../utils/utils");
 
-/**
- * TODO: Rewrite this module using the new MongoDB dbWrapper
- */
-
 const ensureDir = async (dir) => {
   try {
     await fse.ensureDir(dir);
@@ -36,24 +32,26 @@ const ensureDir = async (dir) => {
 const getDatasetDescription = async (req) => {
   console.log("getDatasetDescription: Entered");
   if (!req.query.requestid) return undefined;
-  const requestid = parseInt(req.query.requestid);
+  const estuaryId = parseInt(req.query.requestid);
 
-  const file = await dbWrapper.selectFile(["requestid"], [requestid]);
-  if (!file) return undefined;
+  const chunks = await dbWrapper.getChunks({ "storageIds.estuaryId": estuaryId });
+  // TODO: Check chunks length
+  const chunk = chunks[0];
+  if (!chunk) return undefined;
 
   try {
     // Get and unpack CAR
-    const tempFolder = `estuaryUploads/${file.carcid + Date.now()}`;
-    const fileDest = `${tempFolder}/${file.carcid}.car`;
+    const tempFolder = `estuaryUploads/${chunk.storageIds.cid + Date.now()}`;
+    const fileDest = `${tempFolder}/${chunk.storageIds.cid}.car`;
     const unpackedCarDest = fileDest.slice(0, -4);
     if (!(await ensureDir(tempFolder))) return undefined;
-    await utils.downloadFile(`https://ipfs.io/ipfs/${file.carcid}`, fileDest);
+    await utils.downloadFile(`https://ipfs.io/ipfs/${chunk.storageIds.cid}`, fileDest);
     await unpackToFs({ input: fileDest, output: unpackedCarDest });
 
     // Get root dir of unpacked CAR
     const dirChildren = fs.readdirSync(unpackedCarDest);
     if (dirChildren.length != 1) {
-      console.log(`getDatasetDescription: There are multiple root dirs for dataset designated by requestid ${requestid}. Exiting`);
+      console.log(`getDatasetDescription: There are multiple root dirs for dataset designated by estuaryId ${estuaryId}. Exiting`);
       await utils.removeFiles(tempFolder);
       return false;
     }
@@ -64,7 +62,7 @@ const getDatasetDescription = async (req) => {
     const filepath = `${userDefinedRootDirLocal}/dataset_description.json`;
     const fileExists = await fse.pathExists(filepath);
     if (!fileExists) {
-      console.log(`getDatasetDescription: No dataset_description.json for dataset designated by requestid ${requestid}`);
+      console.log(`getDatasetDescription: No dataset_description.json for dataset designated by estuaryId ${estuaryId}`);
       await utils.removeFiles(tempFolder);
       return undefined;
     }
@@ -84,10 +82,10 @@ const getDatasetDescription = async (req) => {
     const datasetDescription = fse.readJsonSync(filepath, { throws: false });
     await utils.removeFiles(tempFolder);
     if (!datasetDescription) {
-      console.log(`getDatasetDescription: Could not read dataset_description.json for dataset designated by requestid ${requestid}`);
+      console.log(`getDatasetDescription: Could not read dataset_description.json for dataset designated by estuaryId ${estuaryId}`);
       return undefined;
     }
-    console.log(`getDatasetDescription: Retrieved dataset_description.json for dataset designated by requestid ${requestid}`);
+    console.log(`getDatasetDescription: Retrieved dataset_description.json for dataset designated by estuaryId ${estuaryId}`);
     return datasetDescription;
   } catch (err) {
     console.log(err);
