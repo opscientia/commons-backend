@@ -35,15 +35,13 @@ const getFileMetadata = async (req) => {
       },
     };
     const chunks = await dbWrapper.getChunks(chunksQuery);
+    const fileIdToEstuaryId = {};
     const fileIds = [];
     for (const chunk of chunks) {
-      const filesInChunk = chunk.fileIds.map((file) => {
-        // TODO: Figure out how to get estuaryId into final files array
-        // TODO: There must be a better way to return the estuaryIds of the datasets
-        // file.estuaryId = chunk.storageIds.estuaryId;
-        return file;
-      });
-      fileIds.push(...filesInChunk);
+      for (const fileId of chunk.fileIds) {
+        fileIdToEstuaryId[fileId] = chunk.storageIds.estuaryId;
+        fileIds.push(fileId);
+      }
     }
     const filesQuery = {
       _id: {
@@ -51,7 +49,12 @@ const getFileMetadata = async (req) => {
       },
     };
     const files = await dbWrapper.getCommonsFiles(filesQuery);
-    return files;
+    const filesWithEstIds = files.map((file) => ({
+      ...file,
+      // TODO: There must be a better way to return the estuaryIds of the datasets
+      estuaryId: fileIdToEstuaryId[file._id],
+    }));
+    return filesWithEstIds;
   } catch (err) {
     console.log(err);
   }
