@@ -34,7 +34,7 @@ const runBidsValidation = async (pathToDirectory) => {
           console.log(issues);
           resolve(false);
         } else {
-          console.log("BIDS validation succeeded");
+          // console.log("BIDS validation succeeded");
           resolve(true);
         }
       }
@@ -146,13 +146,13 @@ const generateDataset = (params) => {
     title: params.userDefinedRootDir,
     description: params.description, // TODO: Extract from dataset_description.json if it exists
     authors: params.authors || [], // TODO: Extract from dataset_description.json if it exists
-    uploader: params.address,
+    uploader: params.uploader,
     license: params.license, // TODO: Extract from dataset_description.json if it exists
     doi: params.doi, // TODO: Extract from dataset_description.json if it exists
     keywords: params.keywords || [], // TODO: Extract from dataset_description.json if it exists
     published: false,
     size: params.size, // sumFileSizes,
-    chunks: params.chunkIds || [],
+    chunkIds: params.chunkIds || [],
   };
 };
 
@@ -162,13 +162,13 @@ const generateChunk = (params) => {
     datasetId: params.datasetId,
     path: params.path || "/",
     doi: params.doi || "",
-    storageIds: { cid: params.storageIds.cid, estuaryId: params.storageIds.estuaryId },
+    storageIds: { cid: params.storageIds?.cid, estuaryId: params.storageIds?.estuaryId },
     fileIds: params.fileIds || [],
     size: params.size,
     standard: {
       bids: {
-        validated: params.bids.validated || true,
-        version: params.bids.version || "1.9.3",
+        validated: params.bids?.validated || true,
+        version: params.bids?.version || "1.9.3",
         // TODO: Fill in the rest of this
       },
     },
@@ -179,9 +179,10 @@ const generateChunk = (params) => {
  * Insert dataset metadata, chunk metadata, and file(s) metadata into database.
  * @param datasetMetadata
  * @param chunkMetadata
+ * @param files File objects containing metadata (e.g., name, path, chunkId)
  * @returns True if all db requests were acknowledged, false otherwise
  */
-const insertMetadata = async (datasetMetadata, chunkMetadata) => {
+const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
   let acknowledged, dataset, chunk;
   // Max insert attempts. Try inserting multiple time in case of _id collision or other errors
   const maxAttempts = 3;
@@ -211,8 +212,10 @@ const insertMetadata = async (datasetMetadata, chunkMetadata) => {
   }
   if (!acknowledged) {
     console.log("Request to insert chunk metadata was not acknowledged by database. Exiting.");
+    await dbWrapper.deleteDataset({ _id: dataset._id });
     return false;
   }
+  await dbWrapper.updateDataset({ _id: dataset._id }, { $set: { chunkIds: [chunk._id] } });
 
   // commonsFiles
   const fileIds = [];
@@ -224,6 +227,9 @@ const insertMetadata = async (datasetMetadata, chunkMetadata) => {
     }
     if (!acknowledged) {
       console.log("Request to insert commonsFile metadata was not acknowledged by database. Exiting.");
+      await dbWrapper.deleteDataset({ _id: dataset._id });
+      await dbWrapper.deleteChunk({ _id: chunk._id });
+      await dbWrapper.deleteCommonsFiles({ _id: { $in: fileIds } });
       return false;
     }
     fileIds.push(commonsFile._id);
@@ -232,6 +238,9 @@ const insertMetadata = async (datasetMetadata, chunkMetadata) => {
   const updateDocument = { $set: { fileIds: fileIds } };
   const updateSuccess = await dbWrapper.updateChunk(queryFilter, updateDocument);
   if (!updateSuccess) {
+    await dbWrapper.deleteDataset({ _id: dataset._id });
+    await dbWrapper.deleteChunk({ _id: chunk._id });
+    await dbWrapper.deleteCommonsFiles({ _id: { $in: fileIds } });
     console.log("Failed to set chunk.files in database. Exiting.");
   }
   return updateSuccess;
@@ -242,7 +251,7 @@ const uploadFiles = async (req) => {
 
   console.log("uploadFile: Entered");
   if (!(await runInitialInputValidation(req))) return false;
-  console.log(req.files);
+  // console.log(req.files);
 
   const address = req.body.address.toLowerCase();
   const path = req.body.path; // path of uploaded folder from root (this is used by the frontend)
@@ -286,7 +295,7 @@ const uploadFiles = async (req) => {
     return false;
   }
   const newUploadCid = uploadResp.cid;
-  const newUploadRequestId = uploadResp.estuaryId;
+  const newUploadRequestId = uploadResp.requestid;
 
   // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
   const matchingChunkDocuments = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
@@ -298,13 +307,6 @@ const uploadFiles = async (req) => {
 
   const sumFileSizes = files.map((file) => file.size).reduce((a, b) => a + b);
 
-  // Insert a row of metadata for every file in the uploaded directory
-  // for (const file of files) {
-  //   const columns = "(address, filename, path, carcid, requestid)";
-  //   const params = [address, file.name, file.userDefinedPath, newUploadCid, newUploadRequestId];
-  //   console.log(`uploadFile: Inserting row into files: columns: ${columns} params: ${params}`);
-  //   dbWrapper.runSql(`INSERT INTO files ${columns} VALUES (?, ?, ?, ?, ?)`, params);
-  // }
   const datasetMetadata = {
     title: userDefinedRootDir,
     uploader: address,
@@ -314,11 +316,12 @@ const uploadFiles = async (req) => {
     storageIds: { cid: newUploadCid, estuaryId: newUploadRequestId },
     size: sumFileSizes,
   };
-  const insertSuccess = await insertMetadata(datasetMetadata, chunkMetadata);
+  const insertSuccess = await insertMetadata(datasetMetadata, chunkMetadata, files);
   if (!insertSuccess) {
     console.log("Failed to upload metadata files to database. Removing file from Estuary and exiting.");
     await estuaryWrapper.deleteFile(newUploadRequestId);
   }
+  console.log(`Successfully uploaded files for ${address}`);
   return insertSuccess;
 };
 
