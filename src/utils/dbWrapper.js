@@ -13,15 +13,11 @@ const fileCollectionName = "commonsFiles";
 const getItems = async (query, collectionName) => {
   let items;
   try {
-    await mongoClient.connect();
-    // console.log("Connected correctly to server");
     const db = mongoClient.db(mongoDbName);
     const collection = db.collection(collectionName);
-    items = (await collection.find(query)).toArray();
+    items = await collection.find(query).toArray();
   } catch (err) {
     console.log(err);
-  } finally {
-    await mongoClient.close();
   }
   return items;
 };
@@ -58,15 +54,12 @@ module.exports.getCommonsFiles = async (query) => {
 const insertItem = async (item, collectionName) => {
   let acknowledged;
   try {
-    await mongoClient.connect();
     const db = mongoClient.db(mongoDbName);
     const collection = db.collection(collectionName);
     const result = await collection.insertOne(item);
     if (result.acknowledged) acknowledged = true;
   } catch (err) {
     console.log(err);
-  } finally {
-    await mongoClient.close();
   }
   return acknowledged;
 };
@@ -117,7 +110,6 @@ module.exports.insertCommonsFile = async (commonsFile) => {
 const updateItem = async (query, updateDocument, collectionName) => {
   let success;
   try {
-    await mongoClient.connect();
     const db = mongoClient.db(mongoDbName);
     const collection = db.collection(collectionName);
     const options = { upsert: false };
@@ -125,8 +117,6 @@ const updateItem = async (query, updateDocument, collectionName) => {
     if (result.modifiedCount > 0) success = true;
   } catch (err) {
     console.log(err);
-  } finally {
-    await mongoClient.close();
   }
   return success;
 };
@@ -169,15 +159,12 @@ module.exports.updateCommonsFile = async (query, updateDocument) => {
 const deleteOneItem = async (query, collectionName) => {
   let success;
   try {
-    await mongoClient.connect();
     const db = mongoClient.db(mongoDbName);
     const collection = db.collection(collectionName);
     const result = await collection.deleteOne(query);
     if (result.deletedCount > 0) success = true;
   } catch (err) {
     console.log(err);
-  } finally {
-    await mongoClient.close();
   }
   return success;
 };
@@ -214,15 +201,12 @@ module.exports.deleteCommonsFile = async (query) => {
 const deleteManyItems = async (query, collectionName) => {
   let success;
   try {
-    await mongoClient.connect();
     const db = mongoClient.db(mongoDbName);
     const collection = db.collection(collectionName);
     const result = await collection.deleteMany(query);
     if (result.deletedCount > 0) success = true;
   } catch (err) {
     console.log(err);
-  } finally {
-    await mongoClient.close();
   }
   return success;
 };
