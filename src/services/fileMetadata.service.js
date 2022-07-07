@@ -23,66 +23,67 @@ const getFileMetadata = async (req) => {
   }
   const address = req.query.address.toLowerCase();
 
-  // FILES COLUMN: address, filename, path, carcid, requestid
-  // FRONTEND NEEDS: filename, path, requestid
-
-  const datasetsCursor = await dbWrapper.getDatasets({ uploader: address });
-  const datasets = datasetsCursor.toArray();
-  const chunkIds = [];
-  for (const dataset of datasets) {
-    chunkIds.push(...dataset.chunks);
+  try {
+    const datasets = await dbWrapper.getDatasets({ uploader: address });
+    const chunkIds = [];
+    for (const dataset of datasets) {
+      chunkIds.push(...dataset.chunkIds);
+    }
+    const chunksQuery = {
+      _id: {
+        $in: chunkIds,
+      },
+    };
+    const chunks = await dbWrapper.getChunks(chunksQuery);
+    const fileIds = [];
+    for (const chunk of chunks) {
+      const filesInChunk = chunk.fileIds.map((file) => {
+        // TODO: Figure out how to get estuaryId into final files array
+        // TODO: There must be a better way to return the estuaryIds of the datasets
+        // file.estuaryId = chunk.storageIds.estuaryId;
+        return file;
+      });
+      fileIds.push(...filesInChunk);
+    }
+    const filesQuery = {
+      _id: {
+        $in: fileIds,
+      },
+    };
+    const files = await dbWrapper.getCommonsFiles(filesQuery);
+    return files;
+  } catch (err) {
+    console.log(err);
   }
-  const chunksQuery = {
-    _id: {
-      $in: chunkIds,
-    },
-  };
-  const chunks = await dbWrapper.getChunks(chunksQuery);
-  const fileIds = [];
-  for (const chunk of chunks) {
-    const filesInChunk = chunk.files.map((file) => {
-      // TODO: There must be a better way to return the estuaryIds of the datasets
-      file.estuaryId = chunk.storageIds.estuaryId;
-      return file;
-    });
-    fileIds.push(filesInChunk);
-  }
-  const filesQuery = {
-    _id: {
-      $in: fileIds,
-    },
-  };
-  const files = await dbWrapper.getFiles(filesQuery);
-  return files;
 };
 
 /**
- * Delete file by address && requestid && (optionally) path.
+ * Delete file by address && estuaryId && (optionally) path.
  * If path is specified, only the file designated by path is deleted. If path is not specified,
- * the entire CAR file designated by requestid is deleted.
+ * the entire CAR file designated by estuaryId is deleted.
  * Example:
- * curl -X DELETE http://localhost:3005/fileMetadata?address=address=0x0000000000000000000000000000000000000000&requestid=123
+ * curl -X DELETE http://localhost:3005/fileMetadata?address=address=0x0000000000000000000000000000000000000000&estuaryId=123
  */
 const deleteFileMetadata = async (req) => {
   console.log("deleteFileMetadata: Entered");
-  if (!req.query.address || !req.query.requestid || !req.query.signature) {
+  if (!req.query.address || !req.query.estuaryId || !req.query.signature) {
     return false;
   }
   if (req.query.address.length != 42 || req.query.address.substring(0, 2) != "0x") {
     return false;
   }
   const address = req.query.address.toLowerCase();
-  const estuaryId = parseInt(req.query.requestid);
+  const estuaryId = parseInt(req.query.estuaryId);
   const path = req.query.path;
   const signature = req.query.signature;
 
-  // Ensure signer == address == address associated with this requestid
-  let strToSign = `/fileMetadata?address=${req.query.address}&requestid=${requestid}`;
+  // Ensure signer == address == address associated with this estuaryId
+  let strToSign = `/fileMetadata?address=${req.query.address}&estuaryId=${estuaryId}`;
   if (path) strToSign += `&path=${path}`;
   const hashedStr = web3.utils.sha3(strToSign);
   let signer;
   try {
-    signer = (await ethers.utils.recoverAddress(hashedStr, signature)).toLowerCase();
+    signer = ethers.utils.recoverAddress(hashedStr, signature).toLowerCase();
   } catch (err) {
     console.log(err);
     console.log("deleteFileMetadata: malformed signature");
