@@ -55,6 +55,7 @@ module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
         },
       });
+      console.log(`estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`)
       return true;
     } catch (err) {
       numAttempts++;

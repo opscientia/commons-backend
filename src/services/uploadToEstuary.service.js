@@ -152,6 +152,13 @@ const generateDataset = (params) => {
     keywords: params.keywords || [], // TODO: Extract from dataset_description.json if it exists
     published: false,
     size: params.size, // sumFileSizes,
+    standard: {
+      bids: {
+        validated: params.bids?.validated || true,
+        version: params.bids?.version || "1.9.3",
+        // TODO: Fill in the rest of this
+      },
+    },
     chunkIds: params.chunkIds || [],
   };
 };
@@ -165,13 +172,6 @@ const generateChunk = (params) => {
     storageIds: { cid: params.storageIds?.cid, estuaryId: params.storageIds?.estuaryId },
     fileIds: params.fileIds || [],
     size: params.size,
-    standard: {
-      bids: {
-        validated: params.bids?.validated || true,
-        version: params.bids?.version || "1.9.3",
-        // TODO: Fill in the rest of this
-      },
-    },
   };
 };
 
@@ -295,7 +295,7 @@ const uploadFiles = async (req) => {
     return false;
   }
   const newUploadCid = uploadResp.cid;
-  const newUploadRequestId = uploadResp.requestid;
+  const newUploadRequestId = parseInt(uploadResp.requestid);
 
   // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
   const matchingChunkDocuments = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
@@ -320,8 +320,9 @@ const uploadFiles = async (req) => {
   if (!insertSuccess) {
     console.log("Failed to upload metadata files to database. Removing file from Estuary and exiting.");
     await estuaryWrapper.deleteFile(newUploadRequestId);
+  } else {
+    console.log(`Successfully uploaded files for ${address}`);
   }
-  console.log(`Successfully uploaded files for ${address}`);
   return insertSuccess;
 };
 

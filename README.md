@@ -214,17 +214,6 @@ Get the dataset description contained in the dataset_description.json file at th
         keywords: string[]
         published: boolean
         size: number
-        chunkIds: number[]
-    }
-
-    chunk: {
-        // id: number // MongoDB creates an _id field upon insertion
-        datasetId: number // id of parent dataset
-        path: string
-        doi: string
-        storageIds: {cid: -cid-, estuaryId: -estuaryId-} // estuaryId == Estuary's requestid
-        fileIds: number[] // array of commonsFileIds
-        size: number
         standard: {
             bids: {
                 validated: boolean
@@ -238,6 +227,17 @@ Get the dataset description contained in the dataset_description.json file at th
             STANDARD2: {
             }
         }
+        chunkIds: number[]
+    }
+
+    chunk: {
+        // id: number // MongoDB creates an _id field upon insertion
+        datasetId: number // id of parent dataset
+        path: string
+        doi: string
+        storageIds: {cid: -cid-, estuaryId: -estuaryId-} // estuaryId == Estuary's requestid
+        fileIds: number[] // array of commonsFileIds
+        size: number
     }
 
     commonsFile: {

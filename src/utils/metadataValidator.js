@@ -1,19 +1,6 @@
 const yup = require("yup");
 const mongodb = require("mongodb");
 
-const datasetSchema = yup.object().shape({
-  title: yup.string(),
-  description: yup.string(),
-  authors: yup.array().of(yup.string()),
-  uploader: yup.string(),
-  license: yup.string(),
-  doi: yup.string(),
-  keywords: yup.array().of(yup.string()),
-  published: yup.boolean(),
-  size: yup.number().positive(),
-  chunkIds: yup.array().of(yup.mixed((input) => input instanceof mongodb.ObjectId)), // chunkIds
-});
-
 // The values here include return values from the BIDS Validator
 const bidsValidationSchema = yup.object().shape({
   validated: yup.boolean().required(),
@@ -24,6 +11,23 @@ const bidsValidationSchema = yup.object().shape({
   warnings: yup.string(),
   errors: yup.string(),
 });
+const datasetSchema = yup.object().shape({
+  title: yup.string(),
+  description: yup.string(),
+  authors: yup.array().of(yup.string()),
+  uploader: yup.string(),
+  license: yup.string(),
+  doi: yup.string(),
+  keywords: yup.array().of(yup.string()),
+  published: yup.boolean(),
+  size: yup.number().positive(),
+  standard: yup.object().shape({
+    bids: bidsValidationSchema,
+    // Might add more standards here
+  }),
+  chunkIds: yup.array().of(yup.mixed((input) => input instanceof mongodb.ObjectId)), // chunkIds
+});
+
 const chunkSchema = yup.object().shape({
   datasetId: yup.mixed((input) => input instanceof mongodb.ObjectId).required(),
   path: yup.string(),
@@ -32,18 +36,14 @@ const chunkSchema = yup.object().shape({
     .object()
     .shape({
       cid: yup.string().required(),
-      estuaryId: yup.string(),
+      estuaryId: yup.number(),
     })
     .required(),
   fileIds: yup
     .array()
     .of(yup.mixed((input) => input instanceof mongodb.ObjectId))
-    .required(), // fileIds
+    .required(),
   size: yup.number().positive(),
-  standard: yup.object().shape({
-    bids: bidsValidationSchema,
-    // Might add more standards here
-  }),
 });
 
 const commonsFileSchema = yup.object().shape({
