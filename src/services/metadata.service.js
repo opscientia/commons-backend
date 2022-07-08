@@ -123,10 +123,6 @@ const getFileMetadata = async (req) => {
  * the entire CAR file designated by estuaryId is deleted.
  */
 const deleteFileMetadata = async (req) => {
-  // await dbWrapper.deleteCommonsFiles({});
-  // await dbWrapper.deleteChunks({});
-  // await dbWrapper.deleteDatasets({});
-
   console.log("deleteFileMetadata: Entered");
   if (!req.query.address || !req.query.estuaryId || !req.query.signature) {
     return false;
@@ -140,8 +136,7 @@ const deleteFileMetadata = async (req) => {
   const signature = req.query.signature;
 
   // Ensure signer == address == address associated with this estuaryId
-  let strToSign = `/fileMetadata?address=${req.query.address}&estuaryId=${estuaryId}`;
-  if (path) strToSign += `&path=${path}`;
+  let strToSign = `/metadata/files?address=${req.query.address}&estuaryId=${estuaryId}`;
   const hashedStr = web3.utils.sha3(strToSign);
   let signer;
   try {
@@ -171,8 +166,7 @@ const deleteFileMetadata = async (req) => {
   // TODO: Check successfulDelete
   successfulDelete = await dbWrapper.deleteDataset({ _id: datasetId });
   // TODO: Check successfulDelete
-  // return await estuaryWrapper.deleteFile(estuaryId, 5);
-  return true;
+  return await estuaryWrapper.deleteFile(estuaryId, 5);
 };
 
 module.exports = {
