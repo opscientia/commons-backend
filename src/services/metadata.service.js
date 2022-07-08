@@ -1,6 +1,7 @@
 const express = require("express");
 const axios = require("axios");
 const fse = require("fs-extra");
+const mongodb = require("mongodb");
 const web3 = require("web3");
 const { ethers } = require("ethers");
 const { packToFs } = require("ipfs-car/pack/fs");
@@ -12,10 +13,60 @@ const utils = require("../utils/utils");
 const { fetchJson } = require("ethers/lib/utils");
 
 /**
+ * Get dataset metadata for every dataset belonging to the specified address.
+ * (Does not require authentication.)
+ */
+const getDatasetMetadata = async (req) => {
+  if (!req.query.address) {
+    return undefined;
+  }
+  const address = req.query.address.toLowerCase();
+
+  try {
+    const datasets = await dbWrapper.getDatasets({ uploader: address });
+    return datasets;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+/**
+ * On the dataset specified by the provided datasetId, set published to true.
+ * query params: address, signature, datasetId
+ */
+const publishDataset = async (req) => {
+  if (!req.query.address) {
+    return false;
+  }
+  const address = req.query.address.toLowerCase();
+  const signature = req.query.signature;
+  const datasetId = req.query.datasetid;
+
+  // Check signature
+  const msg = `${req.query.address}${datasetId}`;
+  const msgHash = web3.utils.sha3(msg);
+  const signer = ethers.utils.recoverAddress(msgHash, signature).toLowerCase();
+  if (signer != address) {
+    console.log(`signer != address\nsigner:  ${signer}\naddress: ${address}`);
+    return false;
+  }
+
+  let success = false;
+  try {
+    const query = { uploader: address, _id: datasetId };
+    for (let i = 0; i < 3; i++) {
+      success = await dbWrapper.updateDataset(query, { $set: { published: true } });
+      if (success) return success;
+    }
+  } catch (err) {
+    console.log(err);
+  }
+  return success;
+};
+
+/**
  * Get file metadata for every file belonging to the specified address.
  * (Does not require authentication. Only modifications to a user's files require authentication.)
- * Examples:
- * curl -X GET http://localhost:3005/fileMetadata?address=0x0000000000000000000000000000000000000000
  */
 const getFileMetadata = async (req) => {
   if (!req.query.address) {
@@ -64,10 +115,12 @@ const getFileMetadata = async (req) => {
  * Delete file by address && estuaryId && (optionally) path.
  * If path is specified, only the file designated by path is deleted. If path is not specified,
  * the entire CAR file designated by estuaryId is deleted.
- * Example:
- * curl -X DELETE http://localhost:3005/fileMetadata?address=address=0x0000000000000000000000000000000000000000&estuaryId=123
  */
 const deleteFileMetadata = async (req) => {
+  // await dbWrapper.deleteCommonsFiles({});
+  // await dbWrapper.deleteChunks({});
+  // await dbWrapper.deleteDatasets({});
+
   console.log("deleteFileMetadata: Entered");
   if (!req.query.address || !req.query.estuaryId || !req.query.signature) {
     return false;
@@ -112,10 +165,25 @@ const deleteFileMetadata = async (req) => {
   // TODO: Check successfulDelete
   successfulDelete = await dbWrapper.deleteDataset({ _id: datasetId });
   // TODO: Check successfulDelete
-  return await estuaryWrapper.deleteFile(estuaryId, 5);
+  // return await estuaryWrapper.deleteFile(estuaryId, 5);
+  return true;
 };
 
 module.exports = {
+  getDatasetMetadata: async (req, res) => {
+    const datasets = await getDatasetMetadata(req);
+    if (datasets) return res.status(200).json(datasets);
+    return res.status(400).json({ error: "No datasets for the specified address" });
+  },
+  publishDataset: async (req, res) => {
+    const success = await publishDataset(req);
+    if (success) {
+      const id = req.query.datasetId;
+      const addr = req.query.address;
+      return res.status(200).json({ message: `Successfully published dataset ${id} for ${addr}` });
+    }
+    return res.status(400).json({ error: "Failed to publish dataset" });
+  },
   getFileMetadata: async (req, res) => {
     const files = await getFileMetadata(req);
     if (files) return res.status(200).json(files);

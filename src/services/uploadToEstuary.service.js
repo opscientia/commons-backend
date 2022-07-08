@@ -143,7 +143,7 @@ const generateCommonsFile = (file, chunkId) => {
 const generateDataset = (params) => {
   return {
     _id: mongodb.ObjectId(),
-    title: params.userDefinedRootDir,
+    title: params.title,
     description: params.description, // TODO: Extract from dataset_description.json if it exists
     authors: params.authors || [], // TODO: Extract from dataset_description.json if it exists
     uploader: params.uploader,
@@ -195,6 +195,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
       size: datasetMetadata.size,
     });
     acknowledged = await dbWrapper.insertDataset(dataset);
+    if (acknowledged) break;
   }
   if (!acknowledged) {
     console.log("Request to insert dataset metadata was not acknowledged by database. Exiting.");
@@ -209,6 +210,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
       size: chunkMetadata.size,
     });
     acknowledged = await dbWrapper.insertChunk(chunk);
+    if (acknowledged) break;
   }
   if (!acknowledged) {
     console.log("Request to insert chunk metadata was not acknowledged by database. Exiting.");
@@ -224,6 +226,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
     for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
       commonsFile = generateCommonsFile(tmpFile, chunk._id);
       acknowledged = await dbWrapper.insertCommonsFile(commonsFile);
+      if (acknowledged) break;
     }
     if (!acknowledged) {
       console.log("Request to insert commonsFile metadata was not acknowledged by database. Exiting.");
@@ -288,7 +291,8 @@ const uploadFiles = async (req) => {
   // Upload file
   console.log(`Uploading ${carFilename} to Estuary`);
   const file = fs.createReadStream(carFilename);
-  const uploadResp = await estuaryWrapper.uploadFile(file, 3);
+  // const uploadResp = await estuaryWrapper.uploadFile(file, 3);
+  const uploadResp = { cid: "0x123", requestid: "80" };
   await utils.removeFiles(timestampedFolder);
   if (!uploadResp) {
     console.log(`Failed to upload ${carFilename} to Estuary`);
@@ -301,7 +305,7 @@ const uploadFiles = async (req) => {
   const matchingChunkDocuments = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
   if (matchingChunkDocuments.length > 0) {
     console.log("User has already uploaded this file");
-    await estuaryWrapper.deleteFile(newUploadRequestId);
+    // await estuaryWrapper.deleteFile(newUploadRequestId);
     return false;
   }
 
@@ -319,7 +323,7 @@ const uploadFiles = async (req) => {
   const insertSuccess = await insertMetadata(datasetMetadata, chunkMetadata, files);
   if (!insertSuccess) {
     console.log("Failed to upload metadata files to database. Removing file from Estuary and exiting.");
-    await estuaryWrapper.deleteFile(newUploadRequestId);
+    // await estuaryWrapper.deleteFile(newUploadRequestId);
   } else {
     console.log(`Successfully uploaded files for ${address}`);
   }
