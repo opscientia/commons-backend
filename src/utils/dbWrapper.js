@@ -52,7 +52,7 @@ module.exports.getCommonsFiles = async (query) => {
  * @returns True if the insertion request was acknowledged, false otherwise
  */
 const insertItem = async (item, collectionName) => {
-  let acknowledged;
+  let acknowledged = false;
   try {
     const db = mongoClient.db(mongoDbName);
     const collection = db.collection(collectionName);
@@ -108,7 +108,7 @@ module.exports.insertCommonsFile = async (commonsFile) => {
  * @returns True if the update was successful, false otherwise
  */
 const updateItem = async (query, updateDocument, collectionName) => {
-  let success;
+  let success = false;
   try {
     const db = mongoClient.db(mongoDbName);
     const collection = db.collection(collectionName);
@@ -157,7 +157,7 @@ module.exports.updateCommonsFile = async (query, updateDocument) => {
  * @param collectionName The name of the MongoDB collection to insert the item into
  */
 const deleteOneItem = async (query, collectionName) => {
-  let success;
+  let success = false;
   try {
     const db = mongoClient.db(mongoDbName);
     const collection = db.collection(collectionName);
@@ -199,7 +199,7 @@ module.exports.deleteCommonsFile = async (query) => {
  * @param collectionName The name of the MongoDB collection to insert the item into
  */
 const deleteManyItems = async (query, collectionName) => {
-  let success;
+  let success = false;
   try {
     const db = mongoClient.db(mongoDbName);
     const collection = db.collection(collectionName);
