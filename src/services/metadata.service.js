@@ -35,32 +35,38 @@ const getDatasetMetadata = async (req) => {
  * query params: address, signature, datasetId
  */
 const publishDataset = async (req) => {
+  console.log("publisDataset: entered");
   if (!req.query.address) {
     return false;
   }
   const address = req.query.address.toLowerCase();
   const signature = req.query.signature;
-  const datasetId = req.query.datasetid;
+  const datasetId = req.query.datasetId;
 
   // Check signature
   const msg = `${req.query.address}${datasetId}`;
   const msgHash = web3.utils.sha3(msg);
   const signer = ethers.utils.recoverAddress(msgHash, signature).toLowerCase();
   if (signer != address) {
-    console.log(`signer != address\nsigner:  ${signer}\naddress: ${address}`);
+    console.log(`signer != address\nsigner: ${signer}\naddress: ${address}`);
     return false;
   }
 
   let success = false;
   try {
-    const query = { uploader: address, _id: datasetId };
+    const query = { uploader: address, _id: mongodb.ObjectId(datasetId) };
+    const updateDocument = { $set: { published: true } };
     for (let i = 0; i < 3; i++) {
-      success = await dbWrapper.updateDataset(query, { $set: { published: true } });
-      if (success) return success;
+      success = await dbWrapper.updateDataset(query, updateDocument);
+      if (success) {
+        console.log(`publisDataset: successfully published dataset ${datasetId} for ${address}`);
+        return success;
+      }
     }
   } catch (err) {
     console.log(err);
   }
+  console.log(`publishDataset: failed to publish dataset ${datasetId} for ${address}`);
   return success;
 };
 
