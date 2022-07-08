@@ -48,7 +48,7 @@ Get metadata for all datasets uploaded by user with the specified address. Retur
       ```
 
   - 400
-    - description: An error occurred, or there are no files for the specified address
+    - description: An error occurred, or there are no for the specified address
     - response:
       ```JSON
       { "error": "No files for the specified address" }
@@ -146,7 +146,7 @@ Upload files to Estuary. Before uploading, the user must get a nonce from /initi
     formData.append('address', address)
     formData.append('signature', signature)
     for (const file of files) {
-      formData.append('data', files)
+      formData.append('data', file)
       formData.append(file.name, file.path)
     }
     try {
