@@ -31,6 +31,33 @@ const getDatasetMetadata = async (req) => {
 };
 
 /**
+ * Get dataset metadata for every published dataset.
+ * (Does not require authentication.)
+ */
+const getAllPublishedDatasets = async () => {
+  console.log("getAllPublishedDatasets: entered");
+  try {
+    const datasets = await dbWrapper.getDatasets({ published: true });
+    return datasets;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+const getPublishedDatasetById = async (req) => {
+  console.log("getPublishedDatasetById: entered");
+  if (!req.query.id) return false;
+  try {
+    const datasets = await dbWrapper.getDatasets({ _id: mongodb.ObjectId(req.query.id), published: true });
+    if (datasets?.length > 0) {
+      return datasets[0];
+    }
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+/**
  * On the dataset specified by the provided datasetId, set published to true.
  * query params: address, signature, datasetId
  */
@@ -174,6 +201,17 @@ module.exports = {
     const datasets = await getDatasetMetadata(req);
     if (datasets) return res.status(200).json(datasets);
     return res.status(400).json({ error: "No datasets for the specified address" });
+  },
+  getPublishedDatasets: async (req, res) => {
+    if (req.query.id) {
+      const dataset = await getPublishedDatasetById(req);
+      if (dataset) return res.status(200).json(dataset);
+      return res.status(404).json({ error: "There is no published dataset with the specified id" });
+    } else {
+      const datasets = await getAllPublishedDatasets();
+      if (datasets) return res.status(200).json(datasets);
+      return res.status(200).json({ error: "There are no published datasets" });
+    }
   },
   publishDataset: async (req, res) => {
     const success = await publishDataset(req);
