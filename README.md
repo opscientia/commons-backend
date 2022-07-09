@@ -227,6 +227,7 @@ Get the dataset description contained in the dataset_description.json file at th
             STANDARD2: {
             }
         }
+        miscellaneous: any
         chunkIds: number[]
     }
 
