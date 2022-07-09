@@ -10,6 +10,11 @@ const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 const utils = require("../utils/utils");
 
+/**
+ * TODO: Reimplement this using metadata stored in the metadata db.
+ * Don't unpack files within the datasets--this is too resource intensive.
+ */
+
 const ensureDir = async (dir) => {
   try {
     await fse.ensureDir(dir);
@@ -95,6 +100,7 @@ const getDatasetDescription = async (req) => {
 
 module.exports = {
   getDatasetDescription: async (req, res) => {
+    return;
     const desc = await getDatasetDescription(req);
     if (desc) {
       return res.status(200).json(desc);
