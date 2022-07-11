@@ -10,9 +10,232 @@ Its purposes are:
 
 ## Endpoints
 
-### **GET** `/fileMetadata?address=<address>`
+### **GET** `/metadata/datasets/publish?address=<address>&signature=<signature>&datasetId=<datasetId>`
+
+Publish the dataset designated by datasetId. The requestor must also provide their address and their signature of the concatenation of address (as string) and datasetId (as string), i.e., sign(\<address>\<datasetId>). The address must match the address of the signer.
+
+- Parameters
+
+  | name        | description                        | type   | in    | required |
+  | ----------- | ---------------------------------- | ------ | ----- | -------- |
+  | `address`   | Uploader of the dataset to publish | string | query | true     |
+  | `signature` | Signature from uploader            | string | query | true     |
+  | `datasetId` | \_id of dataset to publish         | string | query | true     |
+
+- Example
+
+  ```bash
+  curl -X GET 'https://localhost:3005/metadata/datasets/address=0x0000000000000000000000000000000000000000&signature=0x...123&datasetId=62c8662757a389a8fbd645e9'
+  ```
+
+- Responses
+
+  - 200
+
+    - Successfully retrieved file metadata
+    - Example response:
+      ```JSON
+      [
+        {
+            "_id": new ObjectId("62c8662757a389a8fbd645e9"),
+            "title": "Example Title",
+            "description": "Example description",
+            "authors": ["Author 1", "Author 2"],
+            "uploader": "0x0000000000000000000000000000000000000000", // blockchain address
+            "license": "MIT",
+            "doi": "123",
+            "keywords": ["Keyword 1", "Keyword 2"],
+            "published": false,
+            "size": 10,
+            "standard": {
+                "bids": {
+                    "validated": true,
+                    "version": "1.9.0",
+                    "deidentified": true,
+                    "modality": [],
+                    "tasks": [],
+                    "warnings": "",
+                    "errors": ""
+                }
+            },
+            "miscellaneous": { "partOf": "DANDI" },
+            "chunkIds": [new ObjectId("62c8662757a389a8fbd645ea")] // array of MongoDB ObjectId objects
+        },
+        {
+            ...
+        }
+      ]
+      ```
+
+  - 400
+    - description: An error occurred, or there are no datasets for the specified address
+    - response:
+      ```JSON
+      { "error": "No datasets for the specified address" }
+      ```
+
+### **GET** `/metadata/datasets/published?id=<_id>`
+
+Get the dataset with the specified ID. If the dataset has not been published, an error is returned.
+
+If no "id" parameter is found in the query, all published datasets are returned.
+
+- Parameters
+
+  | name | description                           | type   | in    | required |
+  | ---- | ------------------------------------- | ------ | ----- | -------- |
+  | `id` | \_id of the desired published dataset | string | query | false    |
+
+- Example
+
+  ```bash
+  curl -X GET 'https://localhost:3005/metadata/datasets/published?id=62c8662757a389a8fbd645e9'
+  ```
+
+- Responses
+
+  - 200
+
+    - Successfully retrieved dataset metadata with specified id
+    - Example response (where id is specified):
+
+      ```JSON
+
+        {
+            "_id": new ObjectId("62c8662757a389a8fbd645e9"),
+            "title": "Example Title",
+            "description": "Example description",
+            "authors": ["Author 1", "Author 2"],
+            "uploader": "0x0000000000000000000000000000000000000000", // blockchain address
+            "license": "MIT",
+            "doi": "123",
+            "keywords": ["Keyword 1", "Keyword 2"],
+            "published": false,
+            "size": 10,
+            "standard": {
+                "bids": {
+                    "validated": true,
+                    "version": "1.9.0",
+                    "deidentified": true,
+                    "modality": [],
+                    "tasks": [],
+                    "warnings": "",
+                    "errors": ""
+                }
+            },
+            "miscellaneous": { "partOf": "DANDI" },
+            "chunkIds": [new ObjectId("62c8662757a389a8fbd645ea")] // array of MongoDB ObjectId objects
+        },
+
+      ```
+
+      - Example response (where id is NOT specified):
+
+      ```JSON
+        [
+            {
+                "_id": new ObjectId("62c8662757a389a8fbd645e9"),
+                "title": "Example Title",
+                "description": "Example description",
+                "authors": ["Author 1", "Author 2"],
+                "uploader": "0x0000000000000000000000000000000000000000", // blockchain address
+                "license": "MIT",
+                "doi": "123",
+                "keywords": ["Keyword 1", "Keyword 2"],
+                "published": false,
+                "size": 10,
+                "standard": {
+                    "bids": {
+                        "validated": true,
+                        "version": "1.9.0",
+                        "deidentified": true,
+                        "modality": [],
+                        "tasks": [],
+                        "warnings": "",
+                        "errors": ""
+                    }
+                },
+                "miscellaneous": { "partOf": "DANDI" },
+                "chunkIds": [new ObjectId("62c8662757a389a8fbd645ea")] // array of MongoDB ObjectId objects
+            },
+            {
+                ...
+            }
+        ]
+      ```
+
+  - 400
+    - description: An error occurred, or there are no datasets with the specified id
+    - response:
+      ```JSON
+      { "error": "No published datasets have the specified id" }
+      ```
+
+### **GET** `/metadata/datasets?address=<address>`
 
 Get metadata for all datasets uploaded by user with the specified address. Returns an array of metadata items for every file in every dataset uploaded by the user.
+
+- Parameters
+
+  | name      | description                      | type   | in    | required |
+  | --------- | -------------------------------- | ------ | ----- | -------- |
+  | `address` | Uploader of datasets of interest | string | query | true     |
+
+- Example
+
+  ```bash
+  curl -X GET 'https://localhost:3005/metadata/datasets/address=0x0000000000000000000000000000000000000000'
+  ```
+
+- Responses
+
+  - 200
+
+    - Successfully retrieved file metadata
+    - Example response:
+      ```JSON
+      [
+        {
+            "_id": new ObjectId("62c8662757a389a8fbd645e9"),
+            "title": "Example Title",
+            "description": "Example description",
+            "authors": ["Author 1", "Author 2"],
+            "uploader": "0x0000000000000000000000000000000000000000", // blockchain address
+            "license": "MIT",
+            "doi": "123",
+            "keywords": ["Keyword 1", "Keyword 2"],
+            "published": false,
+            "size": 10,
+            "standard": {
+                "bids": {
+                    "validated": true,
+                    "version": "1.9.0",
+                    "deidentified": true,
+                    "modality": [],
+                    "tasks": [],
+                    "warnings": "",
+                    "errors": ""
+                }
+            },
+            "miscellaneous": { "partOf": "DANDI" },
+            "chunkIds": [new ObjectId("62c8662757a389a8fbd645ea")] // array of MongoDB ObjectId objects
+        },
+        {
+            ...
+        }
+      ]
+      ```
+
+  - 400
+    - description: An error occurred, or there are no datasets for the specified address
+    - response:
+      ```JSON
+      { "error": "No datasets for the specified address" }
+      ```
+
+### **GET** `/metadata/files?address=<address>`
+
+Get metadata for all files uploaded by user with the specified address. Returns an array of metadata items for every file in every file uploaded by the user.
 
 - Parameters
 
@@ -23,7 +246,7 @@ Get metadata for all datasets uploaded by user with the specified address. Retur
 - Example
 
   ```bash
-  curl -X GET 'https://localhost:3005/fileMetadata/address=0x0000000000000000000000000000000000000000'
+  curl -X GET 'https://localhost:3005/metadata/files/address=0x0000000000000000000000000000000000000000'
   ```
 
 - Responses
@@ -48,15 +271,15 @@ Get metadata for all datasets uploaded by user with the specified address. Retur
       ```
 
   - 400
-    - description: An error occurred, or there are no for the specified address
+    - description: An error occurred, or there are no files for the specified address
     - response:
       ```JSON
       { "error": "No files for the specified address" }
       ```
 
-### **DELETE** `/fileMetadata?address=<address>&signature=<signature>&estuaryId=<estuaryId>`
+### **DELETE** `/metadata/files?address=<address>&signature=<signature>&estuaryId=<estuaryId>`
 
-Delete all the file designated by estuaryId from Estuary, and delete all metadata associated with the file's children (if the file is an archive of a directory). The user must provide a signature of the string `/fileMetadata?address=<address>&estuaryId=<estuaryId>`.
+Delete all the file designated by estuaryId from Estuary, and delete all metadata associated with the file's children (if the file is an archive of a directory). The user must provide a signature of the string `/metadata/files?address=<address>&estuaryId=<estuaryId>`.
 
 - Parameters
 
@@ -69,7 +292,7 @@ Delete all the file designated by estuaryId from Estuary, and delete all metadat
 - Example
 
   ```bash
-  curl -X GET 'https://localhost:3005/fileMetadata/address=0x0000000000000000000000000000000000000000'
+  curl -X GET 'https://localhost:3005/metadata/files/address=0x0000000000000000000000000000000000000000'
   ```
 
 - Responses
@@ -178,33 +401,10 @@ Upload files to Estuary. Before uploading, the user must get a nonce from /initi
       { "error": "An error ocurred" }
       ```
 
-### **GET** `/getDatasetDescription?estuaryId=<estuaryId>`
-
-Get the dataset description contained in the dataset_description.json file at the root of the CAR file specified by \<estuaryId>. If the file designated by \<estuaryId> is not a CAR file or does not contain dataset_description.json at the root, then the request will fail.
-
-- Parameters
-
-  | name        | description                             | type   | in    | required |
-  | ----------- | --------------------------------------- | ------ | ----- | -------- |
-  | `estuaryId` | The ID given to the CAR file by Estuary | string | query | true     |
-
-- Responses
-
-  - 200
-
-    - Successful request. Dataset description is returned as JSON.
-
-  - 400
-    - description: An error occurred
-    - response:
-      ```JSON
-      { }
-      ```
-
 ## Metadata Schema
 
     dataset: {
-        // id: number // MongoDB creates an _id field upon insertion
+        _id: any // MongoDB ObjectId object
         title: string
         description: string
         authors: string[]
@@ -228,22 +428,22 @@ Get the dataset description contained in the dataset_description.json file at th
             }
         }
         miscellaneous: any
-        chunkIds: number[]
+        chunkIds: any[] // array of MongoDB ObjectId objects
     }
 
     chunk: {
-        // id: number // MongoDB creates an _id field upon insertion
-        datasetId: number // id of parent dataset
+        _id: any // MongoDB ObjectId object
+        datasetId: any // id of parent dataset // MongoDB ObjectId object
         path: string
         doi: string
         storageIds: {cid: -cid-, estuaryId: -estuaryId-} // estuaryId == Estuary's requestid
-        fileIds: number[] // array of commonsFileIds
+        fileIds: any[] // array of commonsFileIds // array of MongoDB ObjectId objects
         size: number
     }
 
     commonsFile: {
-        // id: number // MongoDB creates an _id field upon insertion
-        chunkId: number // id of parent chunk
+        _id: any // MongoDB ObjectId object
+        chunkId: any // id of parent chunk // MongoDB ObjectId object
         name: string
         path: string
         size: number
