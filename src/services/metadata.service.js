@@ -62,17 +62,19 @@ const getPublishedDatasetById = async (req) => {
  * body params: address, signature, datasetId, title, description, authors, keywords
  */
 const publishDataset = async (req) => {
-  console.log("publisDataset: entered");
-  if (!req.body.address) {
-    return false;
-  }
-  const address = req.body.address.toLowerCase();
+  console.log("publishDataset: entered");
+  const address = req.body.address?.toLowerCase();
   const signature = req.body.signature;
   const datasetId = req.body.datasetId;
   const title = req.body.title;
   const description = req.body.description;
-  const authors = req.body.authors.split(",");
-  const keywords = req.body.keywords.split(",");
+  const authors = req.body.authors?.split(",");
+  const keywords = req.body.keywords?.split(",");
+  if (!address || !signature || !datasetId || !title || !description || !authors) {
+    console.log("publishDataset: parameter(s) not provided");
+    console.log(`parameters: [${address}, ${signature}, ${datasetId}, ${title}, ${description}, ${authors}]`);
+    return false;
+  }
 
   // Check signature
   const msg = `${req.body.address}${datasetId}`;
@@ -228,8 +230,8 @@ module.exports = {
   publishDataset: async (req, res) => {
     const success = await publishDataset(req);
     if (success) {
-      const id = req.query.datasetId;
-      const addr = req.query.address;
+      const id = req.body.datasetId;
+      const addr = req.body.address;
       return res.status(200).json({ message: `Successfully published dataset ${id} for ${addr}` });
     }
     return res.status(400).json({ error: "Failed to publish dataset" });
