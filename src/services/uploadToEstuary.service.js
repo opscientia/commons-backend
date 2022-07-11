@@ -292,7 +292,7 @@ const uploadFiles = async (req) => {
   console.log(`Uploading ${carFilename} to Estuary`);
   const file = fs.createReadStream(carFilename);
   // const uploadResp = await estuaryWrapper.uploadFile(file, 3);
-  const uploadResp = { cid: "0x123", requestid: "80" };
+  const uploadResp = { cid: "0x124", requestid: "81" };
   await utils.removeFiles(timestampedFolder);
   if (!uploadResp) {
     console.log(`Failed to upload ${carFilename} to Estuary`);

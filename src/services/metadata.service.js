@@ -59,19 +59,25 @@ const getPublishedDatasetById = async (req) => {
 
 /**
  * On the dataset specified by the provided datasetId, set published to true.
- * query params: address, signature, datasetId
+ * body params: address, signature, datasetId, title, description, authors, keywords
  */
 const publishDataset = async (req) => {
-  console.log("publisDataset: entered");
-  if (!req.query.address) {
+  console.log("publishDataset: entered");
+  const address = req.body.address?.toLowerCase();
+  const signature = req.body.signature;
+  const datasetId = req.body.datasetId;
+  const title = req.body.title;
+  const description = req.body.description;
+  const authors = req.body.authors?.split(",");
+  const keywords = req.body.keywords?.split(",");
+  if (!address || !signature || !datasetId || !title || !description || !authors) {
+    console.log("publishDataset: parameter(s) not provided");
+    console.log(`parameters: [${address}, ${signature}, ${datasetId}, ${title}, ${description}, ${authors}]`);
     return false;
   }
-  const address = req.query.address.toLowerCase();
-  const signature = req.query.signature;
-  const datasetId = req.query.datasetId;
 
   // Check signature
-  const msg = `${req.query.address}${datasetId}`;
+  const msg = `${req.body.address}${datasetId}`;
   const msgHash = web3.utils.sha3(msg);
   const signer = ethers.utils.recoverAddress(msgHash, signature).toLowerCase();
   if (signer != address) {
@@ -82,7 +88,15 @@ const publishDataset = async (req) => {
   let success = false;
   try {
     const query = { uploader: address, _id: mongodb.ObjectId(datasetId) };
-    const updateDocument = { $set: { published: true } };
+    const updateDocument = {
+      $set: {
+        published: true,
+        title: title,
+        description: description,
+        authors: authors,
+        keywords: keywords,
+      },
+    };
     for (let i = 0; i < 3; i++) {
       success = await dbWrapper.updateDataset(query, updateDocument);
       if (success) {
@@ -216,8 +230,8 @@ module.exports = {
   publishDataset: async (req, res) => {
     const success = await publishDataset(req);
     if (success) {
-      const id = req.query.datasetId;
-      const addr = req.query.address;
+      const id = req.body.datasetId;
+      const addr = req.body.address;
       return res.status(200).json({ message: `Successfully published dataset ${id} for ${addr}` });
     }
     return res.status(400).json({ error: "Failed to publish dataset" });

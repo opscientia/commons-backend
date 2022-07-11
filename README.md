@@ -10,17 +10,21 @@ Its purposes are:
 
 ## Endpoints
 
-### **GET** `/metadata/datasets/publish?address=<address>&signature=<signature>&datasetId=<datasetId>`
+### **POST** `/metadata/datasets/publish?address=<address>&signature=<signature>&datasetId=<datasetId>`
 
 Publish the dataset designated by datasetId. The requestor must also provide their address and their signature of the concatenation of address (as string) and datasetId (as string), i.e., sign(\<address>\<datasetId>). The address must match the address of the signer.
 
 - Parameters
 
-  | name        | description                        | type   | in    | required |
-  | ----------- | ---------------------------------- | ------ | ----- | -------- |
-  | `address`   | Uploader of the dataset to publish | string | query | true     |
-  | `signature` | Signature from uploader            | string | query | true     |
-  | `datasetId` | \_id of dataset to publish         | string | query | true     |
+  | name          | description                        | type   | in   | required |
+  | ------------- | ---------------------------------- | ------ | ---- | -------- |
+  | `address`     | Uploader of the dataset to publish | string | body | true     |
+  | `signature`   | Signature from uploader            | string | body | true     |
+  | `datasetId`   | \_id of dataset to publish         | string | body | true     |
+  | `title`       | Title of dataset to publish        | string | body | true     |
+  | `description` | Description of dataset to publish  | string | body | true     |
+  | `authors`     | Author(s) of dataset to publish    | string | body | true     |
+  | `keywords`    | Keywords of dataset to publish     | string | body | false    |
 
 - Example
 
