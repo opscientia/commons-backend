@@ -129,6 +129,22 @@ const publishDataset = async (req) => {
   return success;
 };
 
+// Get a dataset's child chunks
+const getPublishedChunksByDatasetId = async (req) => {
+  console.log("getPublishedChunksByDatasetId: entered");
+  if (!req.query.datasetId) return false;
+  try {
+    // Get dataset first to ensure datasetId refers to a published dataset
+    const datasets = await dbWrapper.getDatasets({ _id: mongodb.ObjectId(req.query.datasetId), published: true });
+    if (datasets.length > 0) {
+      const chunks = await dbWrapper.getChunks({ datasetId: mongodb.ObjectId(req.query.datasetId) });
+      return chunks;
+    }
+  } catch (err) {
+    console.log(err);
+  }
+};
+
 /**
  * Get file metadata for every file belonging to the specified address.
  * (Does not require authentication. Only modifications to a user's files require authentication.)
@@ -263,6 +279,11 @@ module.exports = {
       return res.status(200).json({ message: `Successfully published dataset ${id} for ${addr}` });
     }
     return res.status(400).json({ error: "Failed to publish dataset" });
+  },
+  getPublishedChunks: async (req, res) => {
+    const chunks = await getPublishedChunksByDatasetId(req);
+    if (chunks) return res.status(200).json(chunks);
+    return res.status(404).json({ error: "There is no published dataset with the specified id" });
   },
   getFileMetadata: async (req, res) => {
     const files = await getFileMetadata(req);

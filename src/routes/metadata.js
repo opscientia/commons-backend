@@ -7,6 +7,7 @@ router.get("/datasets/", metadataService.getDatasetMetadata);
 router.get("/datasets/published", metadataService.getPublishedDatasets);
 router.get("/datasets/published/search", metadataService.searchPublishedDatasets);
 router.post("/datasets/publish", metadataService.publishDataset);
+router.get("/chunks/published", metadataService.getPublishedChunks);
 router.get("/files/", metadataService.getFileMetadata);
 router.delete("/files/", metadataService.deleteFileMetadata);
 
