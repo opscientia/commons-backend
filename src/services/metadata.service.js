@@ -16,17 +16,27 @@ const { fetchJson } = require("ethers/lib/utils");
  * Get dataset metadata for every dataset belonging to the specified address.
  * (Does not require authentication.)
  */
-const getDatasetMetadata = async (req) => {
+const getDatasetMetadata = async (req, res) => {
   if (!req.query.address) {
-    return undefined;
+    const message = "Please specify the dataset uploader with the address query parameter";
+    return res.status(400).json({ error: message });
   }
   const address = req.query.address.toLowerCase();
 
   try {
     const datasets = await dbWrapper.getDatasets({ uploader: address });
-    return datasets;
+    return res.status(200).json(datasets);
   } catch (err) {
     console.log(err);
+  }
+  return res.status(404).json({ error: "No datasets for the specified address" });
+};
+
+const getPublishedDatasets = async (req, res) => {
+  if (req.query.id) {
+    return await getPublishedDatasetById(req, res);
+  } else {
+    return await getAllPublishedDatasets(req, res);
   }
 };
 
@@ -34,33 +44,43 @@ const getDatasetMetadata = async (req) => {
  * Get dataset metadata for every published dataset.
  * (Does not require authentication.)
  */
-const getAllPublishedDatasets = async () => {
+const getAllPublishedDatasets = async (req, res) => {
   console.log("getAllPublishedDatasets: entered");
   try {
     const datasets = await dbWrapper.getDatasets({ published: true });
-    return datasets;
+    return res.status(200).json(datasets);
   } catch (err) {
     console.log(err);
   }
+  return res.status(404).json({ error: "There are no published datasets" });
 };
 
-const getPublishedDatasetById = async (req) => {
+const getPublishedDatasetById = async (req, res) => {
   console.log("getPublishedDatasetById: entered");
-  if (!req.query.id) return false;
+  if (!req.query.id) {
+    const message = "Please specify the dataset ID via the id query parameter";
+    return res.status(404).json({ error: message });
+  }
   try {
-    const datasets = await dbWrapper.getDatasets({ _id: mongodb.ObjectId(req.query.id), published: true });
+    const query = { _id: mongodb.ObjectId(req.query.id), published: true };
+    const datasets = await dbWrapper.getDatasets(query);
     if (datasets?.length > 0) {
-      return datasets[0];
+      return res.status(200).json(datasets[0]);
     }
   } catch (err) {
     console.log(err);
   }
+  const message = "There is no published dataset with the specified id";
+  return res.status(404).json({ error: message });
 };
 
-const searchPublishedDatasets = async (req) => {
+const searchPublishedDatasets = async (req, res) => {
   console.log("searchPublishedDatasets: entered");
   const searchStr = req.query.searchStr;
-  if (!searchStr) return false;
+  if (!searchStr) {
+    const message = "Please provide a search string via the searchStr query parameter";
+    return res.status(400).json({ error: message });
+  }
   try {
     const query = {
       published: true,
@@ -69,17 +89,18 @@ const searchPublishedDatasets = async (req) => {
       },
     };
     const datasets = await dbWrapper.getDatasets(query);
-    return datasets;
+    return res.status(200).json(datasets);
   } catch (err) {
     console.log(err);
   }
+  return res.status(404).json({ error: "No published datasets found" });
 };
 
 /**
  * On the dataset specified by the provided datasetId, set published to true.
  * body params: address, signature, datasetId, title, description, authors, keywords
  */
-const publishDataset = async (req) => {
+const publishDataset = async (req, res) => {
   console.log("publishDataset: entered");
   const address = req.body.address?.toLowerCase();
   const signature = req.body.signature;
@@ -91,7 +112,7 @@ const publishDataset = async (req) => {
   if (!address || !signature || !datasetId || !title || !description || !authors) {
     console.log("publishDataset: parameter(s) not provided");
     console.log(`parameters: [${address}, ${signature}, ${datasetId}, ${title}, ${description}, ${authors}]`);
-    return false;
+    return res.status(400).json({ error: "Failed to publish dataset. Missing parameters." });
   }
 
   // Check signature
@@ -100,7 +121,7 @@ const publishDataset = async (req) => {
   const signer = ethers.utils.recoverAddress(msgHash, signature).toLowerCase();
   if (signer != address) {
     console.log(`signer != address\nsigner: ${signer}\naddress: ${address}`);
-    return false;
+    return res.status(400).json({ error: "Failed to publish dataset. Signer != address" });
   }
 
   let success = false;
@@ -119,39 +140,49 @@ const publishDataset = async (req) => {
       success = await dbWrapper.updateDataset(query, updateDocument);
       if (success) {
         console.log(`publisDataset: successfully published dataset ${datasetId} for ${address}`);
-        return success;
+        const message = `Successfully published dataset ${datasetId} for ${address}`;
+        return res.status(200).json({ message: message });
       }
     }
   } catch (err) {
     console.log(err);
   }
   console.log(`publishDataset: failed to publish dataset ${datasetId} for ${address}`);
-  return success;
+  return res.status(400).json({ error: "Failed to publish dataset." });
 };
 
 // Get a dataset's child chunks
-const getPublishedChunksByDatasetId = async (req) => {
+const getPublishedChunksByDatasetId = async (req, res) => {
   console.log("getPublishedChunksByDatasetId: entered");
-  if (!req.query.datasetId) return false;
+  if (!req.query.datasetId) {
+    const msg = "Please specify the chunk's parent dataset with the datasetId query parameter";
+    return res.status(400).json({ error: msg });
+  }
   try {
     // Get dataset first to ensure datasetId refers to a published dataset
-    const datasets = await dbWrapper.getDatasets({ _id: mongodb.ObjectId(req.query.datasetId), published: true });
+    const dsQuery = { _id: mongodb.ObjectId(req.query.datasetId), published: true };
+    const datasets = await dbWrapper.getDatasets(dsQuery);
     if (datasets.length > 0) {
-      const chunks = await dbWrapper.getChunks({ datasetId: mongodb.ObjectId(req.query.datasetId) });
-      return chunks;
+      const chunksQuery = { datasetId: mongodb.ObjectId(req.query.datasetId) };
+      const chunks = await dbWrapper.getChunks(chunksQuery);
+      return res.status(200).json(chunks);
     }
   } catch (err) {
     console.log(err);
   }
+  const msg = `Found no chunks whose parent dataset is ${req.query.datasetId}`;
+  return res.status(404).json({ error: msg });
 };
 
 /**
  * Get file metadata for every file belonging to the specified address.
  * (Does not require authentication. Only modifications to a user's files require authentication.)
  */
-const getFileMetadata = async (req) => {
+const getFileMetadata = async (req, res) => {
+  console.log("getFileMetadata: entered");
   if (!req.query.address) {
-    return undefined;
+    const message = "Please specify the uploader with the address query parameter";
+    return res.status(400).json({ error: message });
   }
   const address = req.query.address.toLowerCase();
 
@@ -186,10 +217,11 @@ const getFileMetadata = async (req) => {
       // TODO: There must be a better way to return the estuaryIds of the datasets
       estuaryId: fileIdToEstuaryId[file._id],
     }));
-    return filesWithEstIds;
+    return res.status(200).json(filesWithEstIds);
   } catch (err) {
     console.log(err);
   }
+  return res.status(400).json({ error: "No files for the specified address" });
 };
 
 /**
@@ -197,13 +229,14 @@ const getFileMetadata = async (req) => {
  * If path is specified, only the file designated by path is deleted. If path is not specified,
  * the entire CAR file designated by estuaryId is deleted.
  */
-const deleteFileMetadata = async (req) => {
+const deleteFileMetadata = async (req, res) => {
   console.log("deleteFileMetadata: Entered");
   if (!req.query.address || !req.query.estuaryId || !req.query.signature) {
-    return false;
+    return res.status(400).json({ error: "Missing parameter(s)" });
   }
   if (req.query.address.length != 42 || req.query.address.substring(0, 2) != "0x") {
-    return false;
+    const message = "Address must start with 0x and be less than 42 characters long";
+    return res.status(400).json({ error: message });
   }
   const address = req.query.address.toLowerCase();
   const estuaryId = parseInt(req.query.estuaryId);
@@ -219,13 +252,13 @@ const deleteFileMetadata = async (req) => {
   } catch (err) {
     console.log(err);
     console.log("deleteFileMetadata: malformed signature");
-    return false;
+    return res.status(400).json({ error: "Malformed signature" });
   }
   if (signer != address) {
     console.log("deleteFileMetadata: signer != address");
     console.log(`deleteFileMetadata: signer:  ${signer}`);
     console.log(`deleteFileMetadata: address: ${address}`);
-    return false;
+    return res.status(400).json({ error: "Message signer != address" });
   }
   // TODO: Allow deletion of single files
   // Delete entire dataset
@@ -237,7 +270,7 @@ const deleteFileMetadata = async (req) => {
   const dataset = datasets[0];
   if (dataset.published) {
     console.log("deleteFileMetadata: Trying to delete published dataset. Exiting.");
-    return false;
+    return res.status(400).json({ error: "Cannot delete published dataset" });
   }
   const datasetChildChunkIds = dataset.chunkIds;
   let successfulDelete = await dbWrapper.deleteCommonsFiles({ chunkId: { $in: datasetChildChunkIds } });
@@ -246,55 +279,20 @@ const deleteFileMetadata = async (req) => {
   // TODO: Check successfulDelete
   successfulDelete = await dbWrapper.deleteDataset({ _id: datasetId });
   // TODO: Check successfulDelete
-  return await estuaryWrapper.deleteFile(estuaryId, 5);
+  successfulDelete = await estuaryWrapper.deleteFile(estuaryId, 5);
+  if (successfulDelete) {
+    const message = `Successfully deleted file metadata for file with estuaryId: ${estuaryId}`;
+    return res.status(200).json({ data: message });
+  }
+  return res.status(400).json({ error: "An unknown error occurred. Failed to delete dataset." });
 };
 
 module.exports = {
-  getDatasetMetadata: async (req, res) => {
-    const datasets = await getDatasetMetadata(req);
-    if (datasets) return res.status(200).json(datasets);
-    return res.status(400).json({ error: "No datasets for the specified address" });
-  },
-  getPublishedDatasets: async (req, res) => {
-    if (req.query.id) {
-      const dataset = await getPublishedDatasetById(req);
-      if (dataset) return res.status(200).json(dataset);
-      return res.status(404).json({ error: "There is no published dataset with the specified id" });
-    } else {
-      const datasets = await getAllPublishedDatasets();
-      if (datasets) return res.status(200).json(datasets);
-      return res.status(200).json({ error: "There are no published datasets" });
-    }
-  },
-  searchPublishedDatasets: async (req, res) => {
-    const datasets = await searchPublishedDatasets(req);
-    if (datasets) return res.status(200).json(datasets);
-    return res.status(200).json({ error: "No published datasets found" });
-  },
-  publishDataset: async (req, res) => {
-    const success = await publishDataset(req);
-    if (success) {
-      const id = req.body.datasetId;
-      const addr = req.body.address;
-      return res.status(200).json({ message: `Successfully published dataset ${id} for ${addr}` });
-    }
-    return res.status(400).json({ error: "Failed to publish dataset" });
-  },
-  getPublishedChunks: async (req, res) => {
-    const chunks = await getPublishedChunksByDatasetId(req);
-    if (chunks) return res.status(200).json(chunks);
-    return res.status(404).json({ error: "There is no published dataset with the specified id" });
-  },
-  getFileMetadata: async (req, res) => {
-    const files = await getFileMetadata(req);
-    if (files) return res.status(200).json(files);
-    return res.status(400).json({ error: "No files for the specified address" });
-  },
-  deleteFileMetadata: async (req, res) => {
-    const success = await deleteFileMetadata(req);
-    if (success) {
-      return res.status(200).json({ data: `Successfully deleted file metadata for file: ${req.body.filename}` });
-    }
-    return res.status(400).json({ error: `An error ocurred trying to set file metadata for file: ${req.body.filename}` });
-  },
+  getDatasetMetadata: getDatasetMetadata,
+  getPublishedDatasets: getPublishedDatasets,
+  searchPublishedDatasets: searchPublishedDatasets,
+  publishDataset: publishDataset,
+  getPublishedChunks: getPublishedChunksByDatasetId,
+  getFileMetadata: getFileMetadata,
+  deleteFileMetadata: deleteFileMetadata,
 };
