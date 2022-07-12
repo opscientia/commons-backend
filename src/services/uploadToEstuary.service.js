@@ -169,7 +169,7 @@ const generateChunk = (params) => {
     datasetId: params.datasetId,
     path: params.path || "/",
     doi: params.doi || "",
-    storageIds: { cid: params.storageIds?.cid, estuaryId: params.storageIds?.estuaryId },
+    storageIds: { cid: params.storageIds?.cid || "", estuaryId: params.storageIds?.estuaryId || null },
     fileIds: params.fileIds || [],
     size: params.size,
   };
@@ -291,21 +291,21 @@ const uploadFiles = async (req) => {
   // Upload file
   console.log(`Uploading ${carFilename} to Estuary`);
   const file = fs.createReadStream(carFilename);
-  // const uploadResp = await estuaryWrapper.uploadFile(file, 3);
-  const uploadResp = { cid: "0x124", requestid: "81" };
+  const uploadResp = await estuaryWrapper.uploadFile(file, 3);
+  // const uploadResp = { cid: "0x124", estuaryId: "81" }; // THIS LINE IS FOR TESTING ONLY
   await utils.removeFiles(timestampedFolder);
   if (!uploadResp) {
     console.log(`Failed to upload ${carFilename} to Estuary`);
     return false;
   }
   const newUploadCid = uploadResp.cid;
-  const newUploadRequestId = parseInt(uploadResp.requestid);
+  const newUploadEstuaryId = uploadResp.estuaryId;
 
   // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
   const matchingChunkDocuments = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
   if (matchingChunkDocuments.length > 0) {
     console.log("User has already uploaded this file");
-    // await estuaryWrapper.deleteFile(newUploadRequestId);
+    await estuaryWrapper.deleteFile(newUploadEstuaryId);
     return false;
   }
 
@@ -317,13 +317,13 @@ const uploadFiles = async (req) => {
     size: sumFileSizes,
   };
   const chunkMetadata = {
-    storageIds: { cid: newUploadCid, estuaryId: newUploadRequestId },
+    storageIds: { cid: newUploadCid, estuaryId: parseInt(newUploadEstuaryId) },
     size: sumFileSizes,
   };
   const insertSuccess = await insertMetadata(datasetMetadata, chunkMetadata, files);
   if (!insertSuccess) {
     console.log("Failed to upload metadata files to database. Removing file from Estuary and exiting.");
-    // await estuaryWrapper.deleteFile(newUploadRequestId);
+    await estuaryWrapper.deleteFile(newUploadEstuaryId);
   } else {
     console.log(`Successfully uploaded files for ${address}`);
   }

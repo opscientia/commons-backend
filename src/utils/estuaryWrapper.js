@@ -17,7 +17,7 @@ module.exports.getPinsList = async () => {
     const pinMetadata = resp.data.results.map((item) => ({
       filename: item.pin.name,
       cid: item.pin.cid,
-      requestid: item.requestid,
+      estuaryId: item.estuaryId,
     }));
     return pinMetadata;
   } catch (err) {
@@ -55,7 +55,7 @@ module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
         },
       });
-      console.log(`estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`)
+      console.log(`estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`);
       return true;
     } catch (err) {
       numAttempts++;
