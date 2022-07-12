@@ -440,7 +440,7 @@ Upload files to Estuary. Before uploading, the user must get a nonce from /initi
         datasetId: any // id of parent dataset // MongoDB ObjectId object
         path: string
         doi: string
-        storageIds: {cid: -cid-, estuaryId: -estuaryId-} // estuaryId == Estuary's requestid
+        storageIds: {cid: -cid-, estuaryId: -estuaryId-}
         fileIds: any[] // array of commonsFileIds // array of MongoDB ObjectId objects
         size: number
     }
