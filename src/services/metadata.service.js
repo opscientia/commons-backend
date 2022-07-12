@@ -57,6 +57,24 @@ const getPublishedDatasetById = async (req) => {
   }
 };
 
+const searchPublishedDatasets = async (req) => {
+  console.log("searchPublishedDatasets: entered");
+  const searchStr = req.query.searchStr;
+  if (!searchStr) return false;
+  try {
+    const query = {
+      published: true,
+      $text: {
+        $search: searchStr,
+      },
+    };
+    const datasets = await dbWrapper.getDatasets(query);
+    return datasets;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
 /**
  * On the dataset specified by the provided datasetId, set published to true.
  * body params: address, signature, datasetId, title, description, authors, keywords
@@ -200,7 +218,12 @@ const deleteFileMetadata = async (req) => {
   const datasetId = chunks[0].datasetId;
   const datasets = await dbWrapper.getDatasets({ _id: datasetId });
   // TODO: check datasets length
-  const datasetChildChunkIds = datasets[0].chunkIds;
+  const dataset = datasets[0];
+  if (dataset.published) {
+    console.log("deleteFileMetadata: Trying to delete published dataset. Exiting.");
+    return false;
+  }
+  const datasetChildChunkIds = dataset.chunkIds;
   let successfulDelete = await dbWrapper.deleteCommonsFiles({ chunkId: { $in: datasetChildChunkIds } });
   // TODO: Check successfulDelete
   successfulDelete = await dbWrapper.deleteChunks({ _id: { $in: datasetChildChunkIds } });
@@ -226,6 +249,11 @@ module.exports = {
       if (datasets) return res.status(200).json(datasets);
       return res.status(200).json({ error: "There are no published datasets" });
     }
+  },
+  searchPublishedDatasets: async (req, res) => {
+    const datasets = await searchPublishedDatasets(req);
+    if (datasets) return res.status(200).json(datasets);
+    return res.status(200).json({ error: "No published datasets found" });
   },
   publishDataset: async (req, res) => {
     const success = await publishDataset(req);
