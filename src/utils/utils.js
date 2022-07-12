@@ -1,6 +1,8 @@
 const fs = require("fs");
 const fse = require("fs-extra");
 const axios = require("axios");
+const web3 = require("web3");
+const { ethers } = require("ethers");
 
 module.exports.removeFiles = async (pathToFiles) => {
   if (pathToFiles == "estuaryUploads/") return;
@@ -27,4 +29,17 @@ module.exports.downloadFile = async (url, outputPath) => {
       reject();
     });
   });
+};
+
+module.exports.assertSignerIsAddress = async (message, signature, address) => {
+  if (!signature || !address) return false;
+  const msgHash = web3.utils.sha3(message);
+  let signer;
+  try {
+    signer = ethers.utils.recoverAddress(msgHash, signature).toLowerCase();
+  } catch (err) {
+    console.log(err);
+    console.log("Malformed signature");
+  }
+  return signer == address;
 };

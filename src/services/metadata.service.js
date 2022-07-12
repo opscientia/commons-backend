@@ -117,10 +117,9 @@ const publishDataset = async (req, res) => {
 
   // Check signature
   const msg = `${req.body.address}${datasetId}`;
-  const msgHash = web3.utils.sha3(msg);
-  const signer = ethers.utils.recoverAddress(msgHash, signature).toLowerCase();
-  if (signer != address) {
-    console.log(`signer != address\nsigner: ${signer}\naddress: ${address}`);
+  const authSuccess = utils.assertSignerIsAddress(msg, signature, address);
+  if (!authSuccess) {
+    console.log(`signer != address`);
     return res.status(400).json({ error: "Failed to publish dataset. Signer != address" });
   }
 
@@ -225,7 +224,7 @@ const getFileMetadata = async (req, res) => {
 };
 
 /**
- * Delete file by address && estuaryId && (optionally) path.
+ * Delete file by address && estuaryId.
  * If path is specified, only the file designated by path is deleted. If path is not specified,
  * the entire CAR file designated by estuaryId is deleted.
  */
@@ -244,29 +243,25 @@ const deleteFileMetadata = async (req, res) => {
   const signature = req.query.signature;
 
   // Ensure signer == address == address associated with this estuaryId
-  let strToSign = `/metadata/files?address=${req.query.address}&estuaryId=${estuaryId}`;
-  const hashedStr = web3.utils.sha3(strToSign);
-  let signer;
-  try {
-    signer = ethers.utils.recoverAddress(hashedStr, signature).toLowerCase();
-  } catch (err) {
-    console.log(err);
-    console.log("deleteFileMetadata: malformed signature");
-    return res.status(400).json({ error: "Malformed signature" });
-  }
-  if (signer != address) {
-    console.log("deleteFileMetadata: signer != address");
-    console.log(`deleteFileMetadata: signer:  ${signer}`);
-    console.log(`deleteFileMetadata: address: ${address}`);
-    return res.status(400).json({ error: "Message signer != address" });
+  const msg = `/metadata/files?address=${req.query.address}&estuaryId=${estuaryId}`;
+  const authSuccess = utils.assertSignerIsAddress(msg, signature, address);
+  if (!authSuccess) {
+    console.log(`signer != address`);
+    return res.status(400).json({ error: "Failed to delete file metadata. Signer != address" });
   }
   // TODO: Allow deletion of single files
   // Delete entire dataset
   const chunks = await dbWrapper.getChunks({ "storageIds.estuaryId": estuaryId });
-  // TODO: check chunks length
+  if (!chunks || chunks.length == 0) {
+    const message = "Failed to delete file metadata. No corresponding chunks found.";
+    return res.status(404).json({ error: message });
+  }
   const datasetId = chunks[0].datasetId;
   const datasets = await dbWrapper.getDatasets({ _id: datasetId });
-  // TODO: check datasets length
+  if (!datasets || datasets.length == 0) {
+    const message = "Failed to delete file metadata. No corresponding datasets found.";
+    return res.status(404).json({ error: message });
+  }
   const dataset = datasets[0];
   if (dataset.published) {
     console.log("deleteFileMetadata: Trying to delete published dataset. Exiting.");
