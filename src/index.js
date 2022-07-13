@@ -8,9 +8,14 @@ const initializeUpload = require("./routes/initializeUpload");
 
 const app = express();
 
+const corsOptions = {
+  origin: ["https://commons.opsci.io"],
+  // origin: true,
+};
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(cors());
+app.use(cors(corsOptions));
 
 app.use("/metadata", metadata);
 app.use("/uploadToEstuary", uploadToEstuary);
