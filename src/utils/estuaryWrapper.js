@@ -21,7 +21,9 @@ module.exports.getPinsList = async () => {
     }));
     return pinMetadata;
   } catch (err) {
-    console.log(`estuaryWrapper.getPinsList: Response status: ${resp.status}. Error code: ${err.code}. Error message: ${err.message}`);
+    console.log(
+      `estuaryWrapper.getPinsList: Error status: ${err.response?.status}. Error code: ${err.code}. Error message: ${err.message}`
+    );
   }
   return undefined;
 };
@@ -41,7 +43,9 @@ module.exports.uploadFile = async (file, maxAttempts = 3) => {
       return resp.data;
     } catch (err) {
       numAttempts++;
-      console.log(`estuaryWrapper.uploadFile: Response status: ${resp.status}. Error code: ${err.code}. Error message: ${err.message}`);
+      console.log(
+        `estuaryWrapper.uploadFile: Error status: ${err.response?.status}. Error code: ${err.code}. Error message: ${err.message}`
+      );
     }
   }
 };
@@ -59,7 +63,9 @@ module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
       return true;
     } catch (err) {
       numAttempts++;
-      console.log(`estuaryWrapper.deleteFile: Response status: ${resp.status}. Error code: ${err.code}. Error message: ${err.message}`);
+      console.log(
+        `estuaryWrapper.deleteFile: Error status: ${err.response?.status}. Error code: ${err.code}. Error message: ${err.message}`
+      );
     }
   }
 };
