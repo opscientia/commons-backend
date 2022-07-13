@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
 });
 
 // const upload = multer({ dest: `estuaryUploads/${Date.now()}` });
-const maxSize = 2 ** 20 * 100; // 2^20 == 1 MiB
+const maxSize = 2 ** 20 * 500; // 2^20 == 1 MiB
 const upload = multer({ storage: storage, limits: { fileSize: maxSize } });
 
 const uploadToEstuaryService = require("../services/uploadToEstuary.service");
