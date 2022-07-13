@@ -249,11 +249,13 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
   return updateSuccess;
 };
 
-const uploadFiles = async (req) => {
+const uploadFiles = async (req, res) => {
   // TODO: chunking
 
   console.log("uploadFile: Entered");
-  if (!(await runInitialInputValidation(req))) return false;
+  if (!(await runInitialInputValidation(req))) {
+    return res.status(400).json({ error: "Failed initial input validation." });
+  }
   // console.log(req.files);
 
   const address = req.body.address.toLowerCase();
@@ -261,17 +263,19 @@ const uploadFiles = async (req) => {
 
   const files = await moveFilesToCorrectFolders(req);
   if (files.length == 0) {
-    console.log("uploadFiles: Files could not be organized into their proper directories");
+    const message = "Files could not be organized into their proper directories.";
+    console.log(`uploadFiles: ${message}`);
     await utils.removeFiles(req.files[0].destination);
-    return false;
+    return res.status(400).json({ error: message });
   }
 
   const timestampedFolder = req.files[0].destination;
   const dirChildren = fs.readdirSync(timestampedFolder);
   if (dirChildren.length != 1) {
-    console.log("uploadFiles: Files could not be organized into their proper directories");
+    const message = "Files could not be organized into their proper directories.";
+    console.log(`uploadFiles: ${message}`);
     await utils.removeFiles(req.files[0].destination);
-    return false;
+    return res.status(400).json({ error: message });
   }
   const userDefinedRootDir = dirChildren[0];
   const userDefinedRootDirLocal = `${timestampedFolder}/${userDefinedRootDir}/`;
@@ -279,7 +283,7 @@ const uploadFiles = async (req) => {
   const validBids = await runBidsValidation(userDefinedRootDirLocal);
   if (!validBids) {
     await utils.removeFiles(timestampedFolder);
-    return false;
+    return res.status(400).json({ error: "BIDS validation failed." });
   }
 
   const { root, filename: carFilename } = await packToFs({
@@ -296,7 +300,7 @@ const uploadFiles = async (req) => {
   await utils.removeFiles(timestampedFolder);
   if (!uploadResp) {
     console.log(`Failed to upload ${carFilename} to Estuary`);
-    return false;
+    return res.status(400).json({ error: "An error occurred trying to upload to Estuary. Try again later." });
   }
   const newUploadCid = uploadResp.cid;
   const newUploadEstuaryId = uploadResp.estuaryId;
@@ -306,7 +310,7 @@ const uploadFiles = async (req) => {
   if (matchingChunkDocuments.length > 0) {
     console.log("User has already uploaded this file. Removing the duplicate file from Estuary and exiting.");
     await estuaryWrapper.deleteFile(newUploadEstuaryId);
-    return false;
+    return res.status(400).json({ error: "This dataset has already been uploaded." });
   }
 
   const sumFileSizes = files.map((file) => file.size).reduce((a, b) => a + b);
@@ -322,22 +326,18 @@ const uploadFiles = async (req) => {
   };
   const insertSuccess = await insertMetadata(datasetMetadata, chunkMetadata, files);
   if (!insertSuccess) {
-    console.log("Failed to upload metadata files to database. Removing file from Estuary and exiting.");
+    console.log("Failed to insert metadata into database. Removing file from Estuary and exiting.");
     await estuaryWrapper.deleteFile(newUploadEstuaryId);
+    return res.status(400).json({ error: "Failed to insert metadata into database." });
   } else {
     console.log(`Successfully uploaded files for ${address}`);
   }
-  return insertSuccess;
+  return res.status(201).json({
+    message: `Successfully uploaded dataset for address ${address}.`,
+    cid: newUploadCid,
+  });
 };
 
 module.exports = {
-  uploadFiles: async (req, res) => {
-    const success = await uploadFiles(req);
-    if (success) {
-      return res.status(200).json({
-        data: `Successfully uploaded file(s) for ${req.body.address}`,
-      });
-    }
-    return res.status(400).json({ error: `An error ocurred` });
-  },
+  uploadFiles: uploadFiles,
 };
