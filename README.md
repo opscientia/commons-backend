@@ -411,7 +411,7 @@ Upload files to Estuary. Before uploading, the user must get a nonce from /initi
         _id: any // MongoDB ObjectId object
         title: string
         description: string
-        authors: string[]
+        authors: any[] // MongoDB ObjectId object // pointers to author objects
         uploader: string // blockchain address
         license: string
         doi: string
@@ -452,4 +452,12 @@ Upload files to Estuary. Before uploading, the user must get a nonce from /initi
         path: string
         size: number
         documentation: string
+    }
+
+    author: {
+        _id: any // MongoDB ObjectId object
+        name: string
+        orcid: string
+        email: string
+        blockchainAddress: string
     }
