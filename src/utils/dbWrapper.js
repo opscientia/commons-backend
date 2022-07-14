@@ -5,6 +5,7 @@ const mongoDbName = "test";
 const dsCollectionName = "datasets";
 const chunkCollectionName = "chunks";
 const fileCollectionName = "commonsFiles";
+const authorCollectionName = "authors";
 
 /**
  * @param query The query document to use for the MongoDB query
@@ -44,6 +45,14 @@ module.exports.getChunks = async (query) => {
  */
 module.exports.getCommonsFiles = async (query) => {
   return await getItems(query, fileCollectionName);
+};
+
+/**
+ * Get author objects.
+ * @param query The query document to use for the MongoDB query
+ */
+module.exports.getAuthors = async (query) => {
+  return await getItems(query, authorCollectionName);
 };
 
 /**
@@ -101,6 +110,15 @@ module.exports.insertCommonsFile = async (commonsFile) => {
 };
 
 /**
+ * @param author An author object. Must include a `name` attribute
+ * @returns True if the insertion request was acknowledged, false otherwise
+ */
+module.exports.insertAuthor = async (author) => {
+  if (!author.name) return false;
+  return await insertItem(author, authorCollectionName);
+};
+
+/**
  * Update the first item that matches the filter query.
  * @param query The filter to use for the MongoDB query
  * @param updateDocument The updateDocument used to update the entry
@@ -152,6 +170,16 @@ module.exports.updateCommonsFile = async (query, updateDocument) => {
 };
 
 /**
+ * Update author object matching query.
+ * @param query The query document to use for the MongoDB query
+ * @param updateDocument The updateDocument used to update the entry
+ * @returns True if the update was successful, false otherwise
+ */
+module.exports.updateAuthor = async (query, updateDocument) => {
+  return await updateItem(query, updateDocument, authorCollectionName);
+};
+
+/**
  * Delete the first item that matches the query.
  * @param query The query document to use for the MongoDB query
  * @param collectionName The name of the MongoDB collection to insert the item into
@@ -194,6 +222,14 @@ module.exports.deleteCommonsFile = async (query) => {
 };
 
 /**
+ * Delete the first author object matching query.
+ * @param query The query document to use for the MongoDB query
+ */
+module.exports.deleteAuthor = async (query) => {
+  return await deleteOneItem(query, authorCollectionName);
+};
+
+/**
  * Delete the first item that matches the query.
  * @param query The query document to use for the MongoDB query
  * @param collectionName The name of the MongoDB collection to insert the item into
@@ -233,4 +269,12 @@ module.exports.deleteChunks = async (query) => {
  */
 module.exports.deleteCommonsFiles = async (query) => {
   return await deleteManyItems(query, fileCollectionName);
+};
+
+/**
+ * Delete author objects matching query.
+ * @param query The query document to use for the MongoDB query
+ */
+module.exports.deleteAuthors = async (query) => {
+  return await deleteManyItems(query, authorCollectionName);
 };
