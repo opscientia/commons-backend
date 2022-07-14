@@ -48,6 +48,8 @@ module.exports.uploadFile = async (file, maxAttempts = 3) => {
         headers: {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
         },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
       });
       return resp.data;
     } catch (err) {
