@@ -107,11 +107,11 @@ const publishDataset = async (req, res) => {
   const datasetId = req.body.datasetId;
   const title = req.body.title;
   const description = req.body.description;
-  const authors = req.body.authors?.split(",");
+  const authorsStrArr = req.body.authors?.split(",");
   const keywords = req.body.keywords?.split(",");
-  if (!address || !signature || !datasetId || !title || !description || !authors) {
+  if (!address || !signature || !datasetId || !title || !description || !authorsStrArr) {
     console.log(`${new Date().toISOString()} publishDataset: parameter(s) not provided`);
-    console.log(`parameters: [${address}, ${signature}, ${datasetId}, ${title}, ${description}, ${authors}]`);
+    console.log(`parameters: [${address}, ${signature}, ${datasetId}, ${title}, ${description}, ${authorsStrArr}]`);
     return res.status(400).json({ error: "Failed to publish dataset. Missing parameters." });
   }
 
@@ -123,6 +123,20 @@ const publishDataset = async (req, res) => {
     return res.status(400).json({ error: "Failed to publish dataset. Signer != address" });
   }
 
+  // TODO!! -- Find a way to check that an author has not already been added. Perhaps require ORCID
+  const authorIds = [];
+  const authors = authorsStrArr.map((authorStr) => {
+    const authorId = mongodb.ObjectId();
+    authorIds.push(authorId);
+    return {
+      _id: authorId,
+      name: authorStr,
+    };
+  });
+  for (const author of authors) {
+    await dbWrapper.insertAuthor(author);
+  }
+
   let success = false;
   try {
     const query = { uploader: address, _id: mongodb.ObjectId(datasetId) };
@@ -131,7 +145,7 @@ const publishDataset = async (req, res) => {
         published: true,
         title: title,
         description: description,
-        authors: authors,
+        authors: authorIds,
         keywords: keywords,
       },
     };
@@ -140,6 +154,11 @@ const publishDataset = async (req, res) => {
       if (success) {
         console.log(`publisDataset: successfully published dataset ${datasetId} for ${address}`);
         const message = `Successfully published dataset ${datasetId} for ${address}`;
+
+        for (const authorId of authorIds) {
+          await dbWrapper.deleteAuthor({ _id: authorId });
+        }
+
         return res.status(200).json({ message: message });
       }
     }
