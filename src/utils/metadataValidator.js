@@ -6,15 +6,15 @@ const bidsValidationSchema = yup.object().shape({
   validated: yup.boolean().required(),
   version: yup.string(),
   deidentified: yup.boolean(),
-  modality: yup.array().of(yup.string()),
+  modalities: yup.array().of(yup.string()),
   tasks: yup.array().of(yup.string()),
-  warnings: yup.string(),
-  errors: yup.string(),
+  warnings: yup.array().of(yup.string()),
+  errors: yup.array().of(yup.string()),
 });
 const datasetSchema = yup.object().shape({
   title: yup.string(),
   description: yup.string(),
-  authors: yup.array().of(yup.string()),
+  authors: yup.array().of(yup.mixed()), // Array of ObjectIds, pointers to author objects
   uploader: yup.string(),
   license: yup.string(),
   doi: yup.string(),
