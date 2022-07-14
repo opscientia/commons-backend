@@ -8,6 +8,7 @@ const { msgCache } = require("../init");
  */
 module.exports = {
   initializeUpload: async (req, res) => {
+    console.log(`${new Date().toISOString()} initializeUpload: entered`);
     if (!req.query.address) {
       return res.status(400).json({ error: `No address found in query string. Please specify address.` });
     }

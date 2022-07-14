@@ -45,7 +45,7 @@ const getPublishedDatasets = async (req, res) => {
  * (Does not require authentication.)
  */
 const getAllPublishedDatasets = async (req, res) => {
-  console.log("getAllPublishedDatasets: entered");
+  console.log(`${new Date().toISOString()} getAllPublishedDatasets: entered`);
   try {
     const datasets = await dbWrapper.getDatasets({ published: true });
     return res.status(200).json(datasets);
@@ -56,7 +56,7 @@ const getAllPublishedDatasets = async (req, res) => {
 };
 
 const getPublishedDatasetById = async (req, res) => {
-  console.log("getPublishedDatasetById: entered");
+  console.log(`${new Date().toISOString()} getPublishedDatasetById: entered`);
   if (!req.query.id) {
     const message = "Please specify the dataset ID via the id query parameter";
     return res.status(404).json({ error: message });
@@ -75,7 +75,7 @@ const getPublishedDatasetById = async (req, res) => {
 };
 
 const searchPublishedDatasets = async (req, res) => {
-  console.log("searchPublishedDatasets: entered");
+  console.log(`${new Date().toISOString()} searchPublishedDatasets: entered`);
   const searchStr = req.query.searchStr;
   if (!searchStr) {
     const message = "Please provide a search string via the searchStr query parameter";
@@ -101,7 +101,7 @@ const searchPublishedDatasets = async (req, res) => {
  * body params: address, signature, datasetId, title, description, authors, keywords
  */
 const publishDataset = async (req, res) => {
-  console.log("publishDataset: entered");
+  console.log(`${new Date().toISOString()} publishDataset: entered`);
   const address = req.body.address?.toLowerCase();
   const signature = req.body.signature;
   const datasetId = req.body.datasetId;
@@ -110,7 +110,7 @@ const publishDataset = async (req, res) => {
   const authors = req.body.authors?.split(",");
   const keywords = req.body.keywords?.split(",");
   if (!address || !signature || !datasetId || !title || !description || !authors) {
-    console.log("publishDataset: parameter(s) not provided");
+    console.log(`${new Date().toISOString()} publishDataset: parameter(s) not provided`);
     console.log(`parameters: [${address}, ${signature}, ${datasetId}, ${title}, ${description}, ${authors}]`);
     return res.status(400).json({ error: "Failed to publish dataset. Missing parameters." });
   }
@@ -146,13 +146,13 @@ const publishDataset = async (req, res) => {
   } catch (err) {
     console.log(err);
   }
-  console.log(`publishDataset: failed to publish dataset ${datasetId} for ${address}`);
+  console.log(`${new Date().toISOString()} publishDataset: failed to publish dataset ${datasetId} for ${address}`);
   return res.status(400).json({ error: "Failed to publish dataset." });
 };
 
 // Get a dataset's child chunks
 const getPublishedChunksByDatasetId = async (req, res) => {
-  console.log("getPublishedChunksByDatasetId: entered");
+  console.log(`${new Date().toISOString()} getPublishedChunksByDatasetId: entered`);
   if (!req.query.datasetId) {
     const msg = "Please specify the chunk's parent dataset with the datasetId query parameter";
     return res.status(400).json({ error: msg });
@@ -178,7 +178,7 @@ const getPublishedChunksByDatasetId = async (req, res) => {
  * (Does not require authentication. Only modifications to a user's files require authentication.)
  */
 const getFileMetadata = async (req, res) => {
-  console.log("getFileMetadata: entered");
+  console.log(`${new Date().toISOString()} getFileMetadata: entered`);
   if (!req.query.address) {
     const message = "Please specify the uploader with the address query parameter";
     return res.status(400).json({ error: message });
@@ -229,7 +229,7 @@ const getFileMetadata = async (req, res) => {
  * the entire CAR file designated by estuaryId is deleted.
  */
 const deleteFileMetadata = async (req, res) => {
-  console.log("deleteFileMetadata: Entered");
+  console.log(`${new Date().toISOString()} deleteFileMetadata: Entered`);
   if (!req.query.address || !req.query.estuaryId || !req.query.signature) {
     return res.status(400).json({ error: "Missing parameter(s)" });
   }
@@ -264,7 +264,7 @@ const deleteFileMetadata = async (req, res) => {
   }
   const dataset = datasets[0];
   if (dataset.published) {
-    console.log("deleteFileMetadata: Trying to delete published dataset. Exiting.");
+    console.log(`${new Date().toISOString()} deleteFileMetadata: Trying to delete published dataset. Exiting.`);
     return res.status(400).json({ error: "Cannot delete published dataset" });
   }
   const datasetChildChunkIds = dataset.chunkIds;

@@ -198,7 +198,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
     if (acknowledged) break;
   }
   if (!acknowledged) {
-    console.log("Request to insert dataset metadata was not acknowledged by database. Exiting.");
+    console.log(`${new Date().toISOString()} Request to insert dataset metadata was not acknowledged by database. Exiting.`);
     return false;
   }
 
@@ -213,7 +213,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
     if (acknowledged) break;
   }
   if (!acknowledged) {
-    console.log("Request to insert chunk metadata was not acknowledged by database. Exiting.");
+    console.log(`${new Date().toISOString()} Request to insert chunk metadata was not acknowledged by database. Exiting.`);
     await dbWrapper.deleteDataset({ _id: dataset._id });
     return false;
   }
@@ -229,7 +229,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
       if (acknowledged) break;
     }
     if (!acknowledged) {
-      console.log("Request to insert commonsFile metadata was not acknowledged by database. Exiting.");
+      console.log(`${new Date().toISOString()} Request to insert commonsFile metadata was not acknowledged by database. Exiting.`);
       await dbWrapper.deleteDataset({ _id: dataset._id });
       await dbWrapper.deleteChunk({ _id: chunk._id });
       await dbWrapper.deleteCommonsFiles({ _id: { $in: fileIds } });
@@ -244,7 +244,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
     await dbWrapper.deleteDataset({ _id: dataset._id });
     await dbWrapper.deleteChunk({ _id: chunk._id });
     await dbWrapper.deleteCommonsFiles({ _id: { $in: fileIds } });
-    console.log("Failed to set chunk.files in database. Exiting.");
+    console.log(`${new Date().toISOString()} Failed to set chunk.files in database. Exiting.`);
   }
   return updateSuccess;
 };
@@ -252,7 +252,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
 const uploadFiles = async (req, res) => {
   // TODO: chunking
 
-  console.log("uploadFile: Entered");
+  console.log(`${new Date().toISOString()} uploadFile: Entered`);
   if (!(await runInitialInputValidation(req))) {
     return res.status(400).json({ error: "Failed initial input validation." });
   }
@@ -264,7 +264,7 @@ const uploadFiles = async (req, res) => {
   const files = await moveFilesToCorrectFolders(req);
   if (files.length == 0) {
     const message = "Files could not be organized into their proper directories.";
-    console.log(`uploadFiles: ${message}`);
+    console.log(`${new Date().toISOString()} uploadFiles: ${message}`);
     await utils.removeFiles(req.files[0].destination);
     return res.status(400).json({ error: message });
   }
@@ -273,7 +273,7 @@ const uploadFiles = async (req, res) => {
   const dirChildren = fs.readdirSync(timestampedFolder);
   if (dirChildren.length != 1) {
     const message = "Files could not be organized into their proper directories.";
-    console.log(`uploadFiles: ${message}`);
+    console.log(`${new Date().toISOString()} uploadFiles: ${message}`);
     await utils.removeFiles(req.files[0].destination);
     return res.status(400).json({ error: message });
   }
@@ -293,13 +293,13 @@ const uploadFiles = async (req, res) => {
   });
 
   // Upload file
-  console.log(`Uploading ${carFilename} to Estuary`);
+  console.log(`${new Date().toISOString()} Uploading ${carFilename} to Estuary`);
   const file = fs.createReadStream(carFilename);
   const uploadResp = await estuaryWrapper.uploadFile(file, 3);
   // const uploadResp = { cid: "0x124", estuaryId: "81" }; // THIS LINE IS FOR TESTING ONLY
   await utils.removeFiles(timestampedFolder);
   if (!uploadResp) {
-    console.log(`Failed to upload ${carFilename} to Estuary`);
+    console.log(`${new Date().toISOString()} Failed to upload ${carFilename} to Estuary`);
     return res.status(400).json({ error: "An error occurred trying to upload to Estuary. Try again later." });
   }
   const newUploadCid = uploadResp.cid;
@@ -308,7 +308,7 @@ const uploadFiles = async (req, res) => {
   // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
   const matchingChunkDocuments = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
   if (matchingChunkDocuments.length > 0) {
-    console.log("User has already uploaded this file. Removing the duplicate file from Estuary and exiting.");
+    console.log(`${new Date().toISOString()} User has already uploaded this file. Removing the duplicate file from Estuary and exiting.`);
     await estuaryWrapper.deleteFile(newUploadEstuaryId);
     return res.status(400).json({ error: "This dataset has already been uploaded." });
   }
@@ -326,11 +326,11 @@ const uploadFiles = async (req, res) => {
   };
   const insertSuccess = await insertMetadata(datasetMetadata, chunkMetadata, files);
   if (!insertSuccess) {
-    console.log("Failed to insert metadata into database. Removing file from Estuary and exiting.");
+    console.log(`${new Date().toISOString()} Failed to insert metadata into database. Removing file from Estuary and exiting.`);
     await estuaryWrapper.deleteFile(newUploadEstuaryId);
     return res.status(400).json({ error: "Failed to insert metadata into database." });
   } else {
-    console.log(`Successfully uploaded files for ${address}`);
+    console.log(`${new Date().toISOString()} Successfully uploaded files for ${address}`);
   }
   return res.status(201).json({
     message: `Successfully uploaded dataset for address ${address}.`,
