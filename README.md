@@ -423,10 +423,10 @@ Upload files to Estuary. Before uploading, the user must get a nonce from /initi
                 validated: boolean
                 version: string
                 deidentified: boolean
-                modality: string[]
+                modalities: string[]
                 tasks: string[]
-                warnings: string
-                errors: string
+                warnings: string[]
+                errors: string[]
             }
             STANDARD2: {
             }
