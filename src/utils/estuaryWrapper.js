@@ -35,7 +35,16 @@ module.exports.uploadFile = async (file, maxAttempts = 3) => {
   let numAttempts = 0;
   while (numAttempts < maxAttempts) {
     try {
-      const resp = await axios.post("https://shuttle-4.estuary.tech/content/add", formData, {
+      // Get URL of shuttle node with most space
+      const viewerResp = await axios.get("https://api.estuary.tech/viewer", {
+        headers: {
+          Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+        },
+      });
+      const url = viewerResp.data.settings.uploadEndpoints[0];
+
+      // Upload file
+      const resp = await axios.post(url, formData, {
         headers: {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
         },
