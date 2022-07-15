@@ -18,6 +18,15 @@ const runBidsValidation = async (pathToDirectory) => {
   return new Promise((resolve) => {
     // const dirName = values.files[0].webkitRelativePath.split('/')[1]
     // const defaultConfig = `${dirName}/.bids-validator-config.json`
+
+    /** TODO: Add the following to .bidsignore file/config
+      tmp_dcm2bids
+      *~
+      bids.validator.history.txt
+      \#bids.validator.txt\#
+      bids-validator.log
+      #bids.validator.txt#
+     */
     let valid = false;
     validate.default.BIDS(
       pathToDirectory,
@@ -32,10 +41,11 @@ const runBidsValidation = async (pathToDirectory) => {
         if (issues.errors.length > 0) {
           console.log("BIDS validation failed");
           console.log(issues);
-          resolve(false);
+          console.log(issues.errors[0].files);
+          resolve();
         } else {
-          // console.log("BIDS validation succeeded");
-          resolve(true);
+          console.log("BIDS validation succeeded");
+          resolve({ summary: summary, issues: issues });
         }
       }
     );
@@ -154,9 +164,13 @@ const generateDataset = (params) => {
     size: params.size, // sumFileSizes,
     standard: {
       bids: {
-        validated: params.bids?.validated || true,
-        version: params.bids?.version || "1.9.3",
-        // TODO: Fill in the rest of this
+        validated: params.standard?.bids?.validated || true,
+        version: params.standard?.bids?.version || "1.9.3",
+        deidentified: params.standard?.bids?.deidentified || false,
+        modalities: params.standard?.bids?.modalities || [],
+        tasks: params.standard?.bids?.tasks || [],
+        warnings: params.standard?.bids?.warnings || [],
+        errors: params.standard?.bids?.errors || [],
       },
     },
     chunkIds: params.chunkIds || [],
@@ -193,6 +207,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
       title: datasetMetadata.title,
       uploader: datasetMetadata.uploader,
       size: datasetMetadata.size,
+      standard: datasetMetadata.standard,
     });
     acknowledged = await dbWrapper.insertDataset(dataset);
     if (acknowledged) break;
@@ -280,8 +295,8 @@ const uploadFiles = async (req, res) => {
   const userDefinedRootDir = dirChildren[0];
   const userDefinedRootDirLocal = `${timestampedFolder}/${userDefinedRootDir}/`;
 
-  const validBids = await runBidsValidation(userDefinedRootDirLocal);
-  if (!validBids) {
+  const validatorData = await runBidsValidation(userDefinedRootDirLocal);
+  if (!validatorData) {
     await utils.removeFiles(timestampedFolder);
     return res.status(400).json({ error: "BIDS validation failed." });
   }
@@ -319,6 +334,14 @@ const uploadFiles = async (req, res) => {
     title: userDefinedRootDir,
     uploader: address,
     size: sumFileSizes,
+    standard: {
+      bids: {
+        modalities: validatorData.summary.modalities,
+        tasks: validatorData.summary.tasks,
+        warnings: validatorData.issues.warnings,
+        errors: validatorData.issues.errors,
+      },
+    },
   };
   const chunkMetadata = {
     storageIds: { cid: newUploadCid, estuaryId: parseInt(newUploadEstuaryId) },
