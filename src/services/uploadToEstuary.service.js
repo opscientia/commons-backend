@@ -18,15 +18,6 @@ const runBidsValidation = async (pathToDirectory) => {
   return new Promise((resolve) => {
     // const dirName = values.files[0].webkitRelativePath.split('/')[1]
     // const defaultConfig = `${dirName}/.bids-validator-config.json`
-
-    /** TODO: Add the following to .bidsignore file/config
-      tmp_dcm2bids
-      *~
-      bids.validator.history.txt
-      \#bids.validator.txt\#
-      bids-validator.log
-      #bids.validator.txt#
-     */
     let valid = false;
     validate.default.BIDS(
       pathToDirectory,
@@ -133,6 +124,32 @@ const moveFilesToCorrectFolders = async (req) => {
     }
   }
   return files;
+};
+
+/**
+ * Add certain ignore rules to .bidsignore file in root of specified dir.
+ * If no .bidsignore file exists in root of specified dir, one is created.
+ * @param dir Must end with forward slash ('/').
+ */
+const addBidsIgnoreRules = async (dir) => {
+  const linesArr = [
+    "*~",
+    "tmp_dcm2bids",
+    "bids.validator.history.txt",
+    "#bids.validator.txt#",
+    "#bids.validator.txt#",
+    "bids-validator.log",
+  ];
+  const lines = "\n" + linesArr.join("\n");
+  try {
+    const filepath = `${dir}.bidsignore`;
+    await fse.ensureFile(filepath);
+    fs.appendFileSync(filepath, lines);
+    return true;
+  } catch (err) {
+    console.log(err);
+  }
+  return false;
 };
 
 const generateCommonsFile = (file, chunkId) => {
@@ -294,6 +311,8 @@ const uploadFiles = async (req, res) => {
   }
   const userDefinedRootDir = dirChildren[0];
   const userDefinedRootDirLocal = `${timestampedFolder}/${userDefinedRootDir}/`;
+
+  await addBidsIgnoreRules(userDefinedRootDirLocal);
 
   const validatorData = await runBidsValidation(userDefinedRootDirLocal);
   if (!validatorData) {
