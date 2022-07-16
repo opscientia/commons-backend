@@ -99,7 +99,7 @@ const moveFilesToCorrectFolders = async (req) => {
   for (const file of req.files) {
     if (typeof req.body[file.originalname] != "string") {
       console.log("error: typeof req.body[file.originalname] != string");
-      return false;
+      return [];
     }
     const userDefinedPath = req.body[file.originalname].startsWith("/")
       ? req.body[file.originalname].substring(1)
