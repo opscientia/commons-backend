@@ -31,8 +31,6 @@ const runBidsValidation = async (pathToDirectory) => {
       (issues, summary) => {
         if (issues.errors.length > 0) {
           console.log("BIDS validation failed");
-          console.log(issues);
-          console.log(issues.errors[0].files);
           resolve();
         } else {
           console.log("BIDS validation succeeded");
