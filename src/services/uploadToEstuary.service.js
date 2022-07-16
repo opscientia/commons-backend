@@ -109,6 +109,10 @@ const moveFilesToCorrectFolders = async (req) => {
       console.log(req.body[file.originalname]);
       return [];
     }
+    if (req.body[file.originalname].includes("/.git/")) {
+      // Skip files in .git folder
+      continue;
+    }
     const userDefinedPath = req.body[file.originalname].startsWith("/")
       ? req.body[file.originalname].substring(1)
       : req.body[file.originalname];
