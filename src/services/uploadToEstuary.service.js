@@ -98,6 +98,12 @@ const moveFilesToCorrectFolders = async (req) => {
   const timestampedFolder = req.files[0].destination;
   for (const file of req.files) {
     if (typeof req.body[file.originalname] != "string") {
+      // Check if these files are in .git folder. If so, ignore and continue.
+      if (Array.isArray(req.body[file.originalname]) && req.body[file.originalname].length > 0) {
+        if (req.body[file.originalname][0].includes("/.git/")) {
+          continue;
+        }
+      }
       console.log("error: typeof req.body[file.originalname] != string");
       console.log("req.body[file.originalname]...");
       console.log(req.body[file.originalname]);
