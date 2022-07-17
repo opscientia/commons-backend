@@ -46,28 +46,26 @@ const runInitialInputValidation = async (req) => {
   if (!req.body.address || !req.files || !req.body.signature) {
     console.log("Missing argument");
     await utils.removeFiles(req.files[0].destination);
-    return false;
+    return { error: "Missing argument. Please provide address files and signature." };
   }
   if (req.body.address.length != 42 || req.body.address.substring(0, 2) != "0x") {
     console.log("Invalid address");
     await utils.removeFiles(req.files[0].destination);
-    return false;
+    return { error: "Invalid address. Address must be 42 characters long and start with 0x." };
   }
   const address = req.body.address.toLowerCase();
   const secretMessage = msgCache.take(address);
   if (!secretMessage) {
     console.log(`No secret message for ${address} at time ${Date.now()}`);
     await utils.removeFiles(req.files[0].destination);
-    return false;
+    return { error: `No secret message for ${address} at time ${Date.now()}` };
   }
   const msgHash = web3.utils.sha3(secretMessage);
   const signer = (await ethers.utils.recoverAddress(msgHash, req.body.signature)).toLowerCase();
   if (signer != address) {
-    console.log("signer != address");
-    console.log(`signer:  ${signer}`);
-    console.log(`address: ${address}`);
+    console.log(`signer != address\nsigner: ${signer}\naddress: ${address}`);
     await utils.removeFiles(req.files[0].destination);
-    return false;
+    return { error: `No secret message for ${address} in cache. Sign secret message before uploading.` };
   }
 
   // Check that user has Holo
@@ -77,16 +75,16 @@ const runInitialInputValidation = async (req) => {
     if (!holoAddresses.includes(address)) {
       console.log("User is not authorized to upload. They do not have a Holo.");
       await utils.removeFiles(req.files[0].destination);
-      return false;
+      return { error: "User is not authorized to upload. They do not have a Holo." };
     }
   } catch (err) {
     console.log("User is not authorized to upload. They do not have a Holo.");
     console.log(err);
     await utils.removeFiles(req.files[0].destination);
-    return false;
+    return { error: "User is not authorized to upload. They do not have a Holo." };
   }
 
-  return true;
+  return { success: "Initial input validation succeeded." };
 };
 
 // Move uploaded files into the folders that the user had them in.
@@ -295,8 +293,9 @@ const uploadFiles = async (req, res) => {
   // TODO: chunking
 
   console.log(`${new Date().toISOString()} uploadFile: Entered`);
-  if (!(await runInitialInputValidation(req))) {
-    return res.status(400).json({ error: "Failed initial input validation." });
+  const initValidation = await runInitialInputValidation(req);
+  if (initValidation.error) {
+    return res.status(400).json({ error: `Failed initial input validation. Problem: ${initValidation.error}` });
   }
   // console.log(req.files);
 
