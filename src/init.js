@@ -10,7 +10,6 @@ mongoClient.connect().then(() => console.log("Connected to database server"));
 process.on("SIGTERM", async () => await mongoClient.close());
 
 module.exports = {
-  // db: db,
   mongoClient: mongoClient,
   msgCache: msgCache,
 };
