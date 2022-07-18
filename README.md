@@ -10,26 +10,30 @@ Its purposes are:
 
 ## Endpoints
 
-### **POST** `/metadata/datasets/publish?address=<address>&signature=<signature>&datasetId=<datasetId>`
+- **GET** [`/metadata/datasets/`](#metadata-datasets)
+- **GET** [`/metadata/datasets/published/`](#metadata-datasets-published)
+- **GET** [`/metadata/datasets/published/search/`](#metadata-datasets-published-search)
+- **POST** [`/metadata/datasets/publish/`](#metadata-datasets-publish)
+- **GET** [`/metadata/chunks/published/`](#metadata-chunks-published)
+- **GET** [`/metadata/files/`](#metadata-files)
+- **DELETE** [`/metadata/files/`](#metadata-files-delete)
+- **GET** [`/initializeUpload/`](#initialize-upload)
+- **POST** [`/uploadToEstuary/`](#upload)
 
-Publish the dataset designated by datasetId. The requestor must also provide their address and their signature of the concatenation of address (as string) and datasetId (as string), i.e., sign(\<address>\<datasetId>). The address must match the address of the signer.
+### **GET** `/metadata/datasets?address=<address>` {#metadata-datasets}
+
+Get metadata for all datasets uploaded by user with the specified address. Returns an array of metadata items for every file in every dataset uploaded by the user.
 
 - Parameters
 
-  | name          | description                        | type   | in   | required |
-  | ------------- | ---------------------------------- | ------ | ---- | -------- |
-  | `address`     | Uploader of the dataset to publish | string | body | true     |
-  | `signature`   | Signature from uploader            | string | body | true     |
-  | `datasetId`   | \_id of dataset to publish         | string | body | true     |
-  | `title`       | Title of dataset to publish        | string | body | true     |
-  | `description` | Description of dataset to publish  | string | body | true     |
-  | `authors`     | Author(s) of dataset to publish    | string | body | true     |
-  | `keywords`    | Keywords of dataset to publish     | string | body | false    |
+  | name      | description                      | type   | in    | required |
+  | --------- | -------------------------------- | ------ | ----- | -------- |
+  | `address` | Uploader of datasets of interest | string | query | true     |
 
 - Example
 
   ```bash
-  curl -X GET 'https://localhost:3005/metadata/datasets/address=0x0000000000000000000000000000000000000000&signature=0x...123&datasetId=62c8662757a389a8fbd645e9'
+  curl -X GET 'https://localhost:3005/metadata/datasets/address=0x0000000000000000000000000000000000000000'
   ```
 
 - Responses
@@ -78,7 +82,7 @@ Publish the dataset designated by datasetId. The requestor must also provide the
       { "error": "No datasets for the specified address" }
       ```
 
-### **GET** `/metadata/datasets/published?id=<_id>`
+### **GET** `/metadata/datasets/published?id=<_id>` {#metadata-datasets-published}
 
 Get the dataset with the specified ID. If the dataset has not been published, an error is returned.
 
@@ -175,20 +179,92 @@ If no "id" parameter is found in the query, all published datasets are returned.
       { "error": "No published datasets have the specified id" }
       ```
 
-### **GET** `/metadata/datasets?address=<address>`
+### **GET** `/metadata/datasets/published/search?searchStr=<searchStr>` {#metadata-datasets-published-search}
 
-Get metadata for all datasets uploaded by user with the specified address. Returns an array of metadata items for every file in every dataset uploaded by the user.
+Search published datasets.
 
 - Parameters
 
-  | name      | description                      | type   | in    | required |
-  | --------- | -------------------------------- | ------ | ----- | -------- |
-  | `address` | Uploader of datasets of interest | string | query | true     |
+  | name        | description  | type   | in    | required |
+  | ----------- | ------------ | ------ | ----- | -------- |
+  | `searchStr` | Query string | string | query | false    |
 
 - Example
 
   ```bash
-  curl -X GET 'https://localhost:3005/metadata/datasets/address=0x0000000000000000000000000000000000000000'
+  curl -X GET 'https://localhost:3005/metadata/datasets/published/search?searchStr=BIDS'
+  ```
+
+- Responses
+
+  - 200
+
+    - Successfully retrieved metadata for datasets matching search string
+    - Example response:
+      ```JSON
+        [
+            {
+                "_id": new ObjectId("62c8662757a389a8fbd645e9"),
+                "title": "Example Title",
+                "description": "Example description",
+                "authors": ["Author 1", "Author 2"],
+                "uploader": "0x0000000000000000000000000000000000000000", // blockchain address
+                "license": "MIT",
+                "doi": "123",
+                "keywords": ["Keyword 1", "Keyword 2"],
+                "published": false,
+                "size": 10,
+                "standard": {
+                    "bids": {
+                        "validated": true,
+                        "version": "1.9.0",
+                        "deidentified": true,
+                        "modality": [],
+                        "tasks": [],
+                        "warnings": "",
+                        "errors": ""
+                    }
+                },
+                "miscellaneous": { "partOf": "DANDI" },
+                "chunkIds": [new ObjectId("62c8662757a389a8fbd645ea")] // array of MongoDB ObjectId objects
+            },
+            {
+                ...
+            }
+        ]
+      ```
+
+  - 404
+
+    - description: Search yielded no results.
+    - response:
+      ```JSON
+      { "error": "No published datasets found" }
+      ```
+
+  - 400
+    - description: searchStr was not provided, or an error occurred.
+
+### **POST** `/metadata/datasets/publish?address=<address>&signature=<signature>&datasetId=<datasetId>` {#metadata-datasets-publish}
+
+Publish the dataset designated by datasetId. The requestor must also provide their address and their signature of the concatenation of address (as string) and datasetId (as string), i.e., sign(\<address>\<datasetId>). The address must match the address of the signer.
+
+- Parameters
+
+  | name          | description                        | type   | in   | required |
+  | ------------- | ---------------------------------- | ------ | ---- | -------- |
+  | `address`     | Uploader of the dataset to publish | string | body | true     |
+  | `signature`   | Signature from uploader            | string | body | true     |
+  | `datasetId`   | \_id of dataset to publish         | string | body | true     |
+  | `title`       | Title of dataset to publish        | string | body | true     |
+  | `description` | Description of dataset to publish  | string | body | true     |
+  | `authors`     | Author(s) of dataset to publish    | string | body | true     |
+  | `keywords`    | Keywords of dataset to publish     | string | body | false    |
+
+- Example
+
+  ```bash
+  curl -X GET 'https://localhost:3005/metadata/datasets/address=0x0000000000000000000000000000000000000000&signature=0x...123&datasetId=62c8662757a389a8fbd645e9'
   ```
 
 - Responses
@@ -237,7 +313,57 @@ Get metadata for all datasets uploaded by user with the specified address. Retur
       { "error": "No datasets for the specified address" }
       ```
 
-### **GET** `/metadata/files?address=<address>`
+### **GET** `/metadata/chunks/published?datasetId=<datasetId>` {#metadata-chunks-published}
+
+Get chunks by datasetId.
+
+- Parameters
+
+  | name        | description                    | type   | in    | required |
+  | ----------- | ------------------------------ | ------ | ----- | -------- |
+  | `datasetId` | \_id of chunk's parent dataset | string | query | true     |
+
+- Example
+
+  ```bash
+  curl -X GET 'https://localhost:3005/metadata/chunks/published/?datasetId=62c8662757a389a8fbd645e9'
+  ```
+
+- Responses
+
+  - 200
+
+    - Successfully retrieved metadata for chunks belonging to the specified dataset
+    - Example response:
+      ```JSON
+        [
+            {
+                "_id": new ObjectId("62c8662757a389a8fbd645fa"),
+                "datasetId": new ObjectId("62c8662757a389a8fbd645e9"),
+                "path": "/",
+                "doi": "",
+                "storageIds": {"cid": "0x123...", "estuaryId": 5555},
+                "fileIds": ["62c8662757a389a8fbd64513",...],
+                "size": 100
+            }
+            {
+                ...
+            }
+        ]
+      ```
+
+  - 404
+
+    - description: No chunks are children of the specified dataset.
+    - response:
+      ```JSON
+      { "error": "Found no chunks whose parent dataset is 62c8662757a389a8fbd645e9" }
+      ```
+
+  - 400
+    - description: datasetId was not provided, or an error occurred.
+
+### **GET** `/metadata/files?address=<address>` {#metadata-files}
 
 Get metadata for all files uploaded by user with the specified address. Returns an array of metadata items for every file in every file uploaded by the user.
 
@@ -281,7 +407,7 @@ Get metadata for all files uploaded by user with the specified address. Returns 
       { "error": "No files for the specified address" }
       ```
 
-### **DELETE** `/metadata/files?address=<address>&signature=<signature>&estuaryId=<estuaryId>`
+### **DELETE** `/metadata/files?address=<address>&signature=<signature>&estuaryId=<estuaryId>` {#metadata-files-delete}
 
 Delete all the file designated by estuaryId from Estuary, and delete all metadata associated with the file's children (if the file is an archive of a directory). The user must provide a signature of the string `/metadata/files?address=<address>&estuaryId=<estuaryId>`.
 
@@ -327,7 +453,7 @@ Delete all the file designated by estuaryId from Estuary, and delete all metadat
       { "error": "No files for the specified address" }
       ```
 
-### **GET** `/initializeUpload?address=<address>`
+### **GET** `/initializeUpload?address=<address>` {#initialize-upload}
 
 Initialize an upload interaction. This endpoint returns a message which the user must sign in order to upload.
 
@@ -353,7 +479,7 @@ Initialize an upload interaction. This endpoint returns a message which the user
       { "error": "No address found in query string. Please specify address." }
       ```
 
-### **POST** `/uploadToEstuary`
+### **POST** `/uploadToEstuary` {#upload}
 
 Upload files to Estuary. Before uploading, the user must get a nonce from /initializeUpload and sign it with their private key. The resulting signature must be included in the request body. This is used for authentication.
 
