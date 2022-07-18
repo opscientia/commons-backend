@@ -19,7 +19,6 @@ app.use(cors(corsOptions));
 
 app.use("/metadata", metadata);
 app.use("/uploadToEstuary", uploadToEstuary);
-app.use("/getDatasetDescription", getDatasetDescription);
 app.use("/initializeUpload", initializeUpload);
 
 module.exports = app;
