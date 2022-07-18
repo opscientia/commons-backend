@@ -161,6 +161,9 @@ const addBidsIgnoreRules = async (dir) => {
 };
 
 const generateCommonsFile = (file, chunkId) => {
+  if (!file.path.startsWith("/")) {
+    file.path = "/" + file.path;
+  }
   return {
     _id: mongodb.ObjectId(),
     chunkId: chunkId,
