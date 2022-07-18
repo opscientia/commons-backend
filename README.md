@@ -16,17 +16,17 @@ Its purposes are:
 
 ## Endpoints
 
-- **GET** [`/metadata/datasets/`](#metadata-datasets)
-- **GET** [`/metadata/datasets/published/`](#metadata-datasets-published)
-- **GET** [`/metadata/datasets/published/search/`](#metadata-datasets-published-search)
-- **POST** [`/metadata/datasets/publish/`](#metadata-datasets-publish)
-- **GET** [`/metadata/chunks/published/`](#metadata-chunks-published)
-- **GET** [`/metadata/files/`](#metadata-files)
-- **DELETE** [`/metadata/files/`](#metadata-files-delete)
-- **GET** [`/initializeUpload/`](#initialize-upload)
-- **POST** [`/uploadToEstuary/`](#upload)
+- **GET** `/metadata/datasets/`
+- **GET** `/metadata/datasets/published/`
+- **GET** `/metadata/datasets/published/search/`
+- **POST** `/metadata/datasets/publish/`
+- **GET** `/metadata/chunks/published/`
+- **GET** `/metadata/files/`
+- **DELETE** `/metadata/files/`
+- **GET** `/initializeUpload/`
+- **POST** `/uploadToEstuary/`
 
-### **GET** `/metadata/datasets?address=<address>` {#metadata-datasets}
+### **GET** `/metadata/datasets?address=<address>`
 
 Get metadata for all datasets uploaded by user with the specified address. Returns an array of metadata items for every file in every dataset uploaded by the user.
 
@@ -88,7 +88,7 @@ Get metadata for all datasets uploaded by user with the specified address. Retur
       { "error": "No datasets for the specified address" }
       ```
 
-### **GET** `/metadata/datasets/published?id=<_id>` {#metadata-datasets-published}
+### **GET** `/metadata/datasets/published?id=<_id>`
 
 Get the dataset with the specified ID. If the dataset has not been published, an error is returned.
 
@@ -185,7 +185,7 @@ If no "id" parameter is found in the query, all published datasets are returned.
       { "error": "No published datasets have the specified id" }
       ```
 
-### **GET** `/metadata/datasets/published/search?searchStr=<searchStr>` {#metadata-datasets-published-search}
+### **GET** `/metadata/datasets/published/search?searchStr=<searchStr>`
 
 Search published datasets.
 
@@ -251,7 +251,7 @@ Search published datasets.
   - 400
     - description: searchStr was not provided, or an error occurred.
 
-### **POST** `/metadata/datasets/publish?address=<address>&signature=<signature>&datasetId=<datasetId>` {#metadata-datasets-publish}
+### **POST** `/metadata/datasets/publish`
 
 Publish the dataset designated by datasetId. The requestor must also provide their address and their signature of the concatenation of address (as string) and datasetId (as string), i.e., sign(\<address>\<datasetId>). The address must match the address of the signer.
 
@@ -319,7 +319,7 @@ Publish the dataset designated by datasetId. The requestor must also provide the
       { "error": "No datasets for the specified address" }
       ```
 
-### **GET** `/metadata/chunks/published?datasetId=<datasetId>` {#metadata-chunks-published}
+### **GET** `/metadata/chunks/published?datasetId=<datasetId>`
 
 Get chunks by datasetId.
 
@@ -369,7 +369,7 @@ Get chunks by datasetId.
   - 400
     - description: datasetId was not provided, or an error occurred.
 
-### **GET** `/metadata/files?address=<address>` {#metadata-files}
+### **GET** `/metadata/files?address=<address>`
 
 Get metadata for all files uploaded by user with the specified address. Returns an array of metadata items for every file in every file uploaded by the user.
 
@@ -413,7 +413,7 @@ Get metadata for all files uploaded by user with the specified address. Returns 
       { "error": "No files for the specified address" }
       ```
 
-### **DELETE** `/metadata/files?address=<address>&signature=<signature>&estuaryId=<estuaryId>` {#metadata-files-delete}
+### **DELETE** `/metadata/files?address=<address>&signature=<signature>&estuaryId=<estuaryId>`
 
 Delete all the file designated by estuaryId from Estuary, and delete all metadata associated with the file's children (if the file is an archive of a directory). The user must provide a signature of the string `/metadata/files?address=<address>&estuaryId=<estuaryId>`.
 
@@ -459,7 +459,7 @@ Delete all the file designated by estuaryId from Estuary, and delete all metadat
       { "error": "No files for the specified address" }
       ```
 
-### **GET** `/initializeUpload?address=<address>` {#initialize-upload}
+### **GET** `/initializeUpload?address=<address>`
 
 Initialize an upload interaction. This endpoint returns a message which the user must sign in order to upload.
 
@@ -485,7 +485,7 @@ Initialize an upload interaction. This endpoint returns a message which the user
       { "error": "No address found in query string. Please specify address." }
       ```
 
-### **POST** `/uploadToEstuary` {#upload}
+### **POST** `/uploadToEstuary`
 
 Upload files to Estuary. Before uploading, the user must get a nonce from /initializeUpload and sign it with their private key. The resulting signature must be included in the request body. This is used for authentication.
 
