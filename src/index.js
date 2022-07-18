@@ -3,7 +3,6 @@ const cors = require("cors");
 
 const metadata = require("./routes/metadata");
 const uploadToEstuary = require("./routes/uploadToEstuary");
-const getDatasetDescription = require("./routes/getDatasetDescription");
 const initializeUpload = require("./routes/initializeUpload");
 
 const app = express();
