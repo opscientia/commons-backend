@@ -14,7 +14,7 @@ Its purposes are:
 - [Architecture](#architecture)
 - [Metadata Schema](#metadata-schema)
 
-## Endpoints {#endpoints}
+## Endpoints
 
 - **GET** [`/metadata/datasets/`](#metadata-datasets)
 - **GET** [`/metadata/datasets/published/`](#metadata-datasets-published)
@@ -537,7 +537,7 @@ Upload files to Estuary. Before uploading, the user must get a nonce from /initi
       { "error": "An error ocurred" }
       ```
 
-## Architecture {#architecture}
+## Architecture
 
 At a high level, there are 4 components of OpSci Commons:
 
