@@ -531,6 +531,16 @@ Upload files to Estuary. Before uploading, the user must get a nonce from /initi
       { "error": "An error ocurred" }
       ```
 
+## Architecture Diagrams
+
+![Upload Dataset](https://www.websequencediagrams.com/cgi-bin/cdraw?lz=dGl0bGUgT3BTY2kgQ29tbW9ucyBVcGxvYWQKCkZyb250ZW5kLT5CYWNrZW5kIFNlcnZlcjogUmVxdWVzdCBzZWNyZXQKABEOLT4AMQg6IFNlbmQAHggANRoAawYgZGF0YXNldCAod2l0aCBzaWduZQA1CCkAUxFFc3R1YXJ5AC0QCgARBwCBIBR0dXJuIENJRCBhbmQgZQA6BklkAIEtEU1ldGFkYXRhAIFlCUluc2VydACBFgltABkHAIFcGwBlBwAhEQoK&s=default)
+
+![Publish Dataset](https://www.websequencediagrams.com/cgi-bin/cdraw?lz=dGl0bGUgT3BTY2kgQ29tbW9ucyBQdWJsaXNoCgpGcm9udGVuZC0-QmFja2VuZCBTZXJ2ZXI6ABsIIGRhdGFzZXQKABIOLT5NZXRhZGF0YSBEYXRhYmFzZToAIwgucABYBmVkID0gdHJ1ZQoK&s=default)
+
+![Search Datasets](https://www.websequencediagrams.com/cgi-bin/cdraw?lz=dGl0bGUgT3BTY2kgQ29tbW9ucyBTZWFyY2gKCkZyb250ZW5kLT5CYWNrZW5kIFNlcnZlcjogUXVlcnkKAAgOLT5NZXRhZGF0YSBEYXRhYmFzZQAhCAAIEQA7FyByZXN1bHRzAEkRAIECCAAYEAoK&s=default)
+
+![Delete Dataset](https://www.websequencediagrams.com/cgi-bin/cdraw?lz=dGl0bGUgT3BTY2kgQ29tbW9ucyBEZWxldGUKCgpGcm9udGVuZC0-QmFja2VuZCBTZXJ2ZXI6ABwHIGRhdGFzZXQKABEOLT5NZXRhZGF0YQAZFyBtABkHACgRRXN0dWFyeQBQEQo&s=default)
+
 ## Metadata Schema
 
     dataset: {
