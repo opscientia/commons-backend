@@ -6,9 +6,15 @@ Its purposes are:
 
 - Authenticate file upload/delete requests using Holo.
 - Forward file uploads/delete requests to Estuary.
-- Handle logic for storing and retrieving metadata of datasets stored on Commons (see [metadata-schema](#metadata-schema)).
+- Handle logic for storing and retrieving metadata of datasets stored on Commons (see the [metadata schema](#metadata-schema)).
 
-## Endpoints
+## Contents
+
+- [Endpoints](#endpoints)
+- [Architecture](#architecture)
+- [Metadata Schema](#metadata-schema)
+
+## Endpoints {#endpoints}
 
 - **GET** [`/metadata/datasets/`](#metadata-datasets)
 - **GET** [`/metadata/datasets/published/`](#metadata-datasets-published)
@@ -531,7 +537,24 @@ Upload files to Estuary. Before uploading, the user must get a nonce from /initi
       { "error": "An error ocurred" }
       ```
 
-## Architecture Diagrams
+## Architecture {#architecture}
+
+At a high level, there are 4 components of OpSci Commons:
+
+- Frontend (user interface)
+- Backend server
+- Metadata database
+- Estuary (which uses IPFS & Filecoin)
+
+**Frontend.** This is where users upload, publish, search, and download datasets.
+
+**Backend server.** This server handles access control logic and acts as a proxy between the frontend and the other two components.
+
+**Metadata database.** Stores dataset metadata according to the [metadata schema](#metadata-schema). Note: This database could be a MongoDB cluster, an on-chain smart contract, or something else.
+
+**Estuary.** An open source service run by Protocol Labs that allows developers to easily upload to IPFS and Filecoin. (Check it out [here](https://estuary.tech/).) It is used by OpSci Commons to store extremely large datasets.
+
+### Architecture Diagrams
 
 ![Upload Dataset](https://www.websequencediagrams.com/cgi-bin/cdraw?lz=dGl0bGUgT3BTY2kgQ29tbW9ucyBVcGxvYWQKCkZyb250ZW5kLT5CYWNrZW5kIFNlcnZlcjogUmVxdWVzdCBzZWNyZXQKABEOLT4AMQg6IFNlbmQAHggANRoAawYgZGF0YXNldCAod2l0aCBzaWduZQA1CCkAUxFFc3R1YXJ5AC0QCgARBwCBIBR0dXJuIENJRCBhbmQgZQA6BklkAIEtEU1ldGFkYXRhAIFlCUluc2VydACBFgltABkHAIFcGwBlBwAhEQoK&s=default)
 
