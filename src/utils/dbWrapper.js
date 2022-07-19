@@ -1,7 +1,7 @@
 const { mongoClient } = require("../init");
 const { validateDataset, validateChunk, validateCommonsFile } = require("./metadataValidator");
 
-const mongoDbName = "test";
+const mongoDbName = "admin";
 const dsCollectionName = "datasets";
 const chunkCollectionName = "chunks";
 const fileCollectionName = "commonsFiles";
