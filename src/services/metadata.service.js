@@ -301,6 +301,30 @@ const deleteFileMetadata = async (req, res) => {
   return res.status(400).json({ error: "An unknown error occurred. Failed to delete dataset." });
 };
 
+const getAuthorsByDatasetId = async (req, res) => {
+  console.log(`${new Date().toISOString()} getAuthorsByDatasetId: entered`);
+  if (!req.query.datasetId) {
+    const message = "Please specify the dataset ID via the datasetId query parameter";
+    return res.status(404).json({ error: message });
+  }
+  try {
+    const query = { _id: mongodb.ObjectId(req.query.datasetId), published: true };
+    const datasets = await dbWrapper.getDatasets(query);
+    if (datasets?.length > 0) {
+      const authorIds = datasets[0].authors;
+      const authorsQuery = { _id: { $in: authorIds } };
+      const authors = await dbWrapper.getAuthors(authorsQuery);
+      if (authors.length > 0) {
+        return res.status(200).json(authors);
+      }
+    }
+  } catch (err) {
+    console.log(err);
+  }
+  const message = "There are no authors for the specified dataset";
+  return res.status(404).json({ error: message });
+};
+
 module.exports = {
   getDatasetMetadata: getDatasetMetadata,
   getPublishedDatasets: getPublishedDatasets,
@@ -309,4 +333,5 @@ module.exports = {
   getPublishedChunks: getPublishedChunksByDatasetId,
   getFileMetadata: getFileMetadata,
   deleteFileMetadata: deleteFileMetadata,
+  getAuthorsByDatasetId: getAuthorsByDatasetId,
 };

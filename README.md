@@ -23,6 +23,7 @@ Its purposes are:
 - **GET** `/metadata/chunks/published/`
 - **GET** `/metadata/files/`
 - **DELETE** `/metadata/files/`
+- **GET** `/metadata/authors/`
 - **GET** `/initializeUpload/`
 - **POST** `/uploadToEstuary/`
 

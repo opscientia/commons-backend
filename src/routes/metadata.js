@@ -10,5 +10,6 @@ router.post("/datasets/publish", metadataService.publishDataset);
 router.get("/chunks/published", metadataService.getPublishedChunks);
 router.get("/files/", metadataService.getFileMetadata);
 router.delete("/files/", metadataService.deleteFileMetadata);
+router.get("/authors/", metadataService.getAuthorsByDatasetId);
 
 module.exports = router;
