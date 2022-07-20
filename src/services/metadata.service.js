@@ -126,7 +126,7 @@ const publishDataset = async (req, res) => {
   // TODO!! -- Find a way to check that an author has not already been added. Perhaps require ORCID
   const authorIds = [];
   const authors = authorsStrArr.map((authorStr) => {
-    const authorId = mongodb.ObjectId();
+    const authorId = new mongodb.ObjectId();
     authorIds.push(authorId);
     return {
       _id: authorId,
@@ -134,9 +134,10 @@ const publishDataset = async (req, res) => {
     };
   });
   for (const author of authors) {
-    await dbWrapper.insertAuthor(author);
+    if (!(await dbWrapper.insertAuthor(author))) {
+      return res.status(400).json({ error: "Failed to insert author into database" });
+    }
   }
-
   let success = false;
   try {
     const query = { uploader: address, _id: mongodb.ObjectId(datasetId) };
@@ -154,11 +155,6 @@ const publishDataset = async (req, res) => {
       if (success) {
         console.log(`publisDataset: successfully published dataset ${datasetId} for ${address}`);
         const message = `Successfully published dataset ${datasetId} for ${address}`;
-
-        for (const authorId of authorIds) {
-          await dbWrapper.deleteAuthor({ _id: authorId });
-        }
-
         return res.status(200).json({ message: message });
       }
     }
@@ -311,7 +307,7 @@ const getAuthorsByDatasetId = async (req, res) => {
     const query = { _id: mongodb.ObjectId(req.query.datasetId), published: true };
     const datasets = await dbWrapper.getDatasets(query);
     if (datasets?.length > 0) {
-      const authorIds = datasets[0].authors;
+      const authorIds = datasets[0].authors.map((idStr) => mongodb.ObjectId(idStr));
       const authorsQuery = { _id: { $in: authorIds } };
       const authors = await dbWrapper.getAuthors(authorsQuery);
       if (authors.length > 0) {
