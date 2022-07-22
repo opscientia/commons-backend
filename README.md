@@ -460,6 +460,50 @@ Delete all the file designated by estuaryId from Estuary, and delete all metadat
       { "error": "No files for the specified address" }
       ```
 
+### **GET** `/metadata/authors?datasetId=<datasetId>`
+
+Get the authors of a dataset.
+
+- Parameters
+
+  | name        | description  | type   | in    | required |
+  | ----------- | ------------ | ------ | ----- | -------- |
+  | `datasetId` | dataset \_id | string | query | true     |
+
+- Example
+
+  ```bash
+  curl -X GET 'https://localhost:3005/metadata/authors/datasetId=62c8662757a389a8fbd645fa'
+  ```
+
+- Responses
+
+  - 200
+
+    - Successfully retrieved author objects for all authors of the dataset
+    - Example response:
+      ```JSON
+      [
+        {
+            "_id": new ObjectId("62c8662757a389a8fbd645fa"),
+            "name": "John Doe",
+            "orcid": "0000-0000-0000-0000",
+            "email": "",
+            "blockchainAddress": ""
+        },
+        {
+            ...
+        }
+      ]
+      ```
+
+  - 400
+    - description: An error occurred, the dataset does not exist, or the dataset does not have authors
+    - response:
+      ```JSON
+      { "error": "There are no authors for the specified dataset" }
+      ```
+
 ### **GET** `/initializeUpload?address=<address>`
 
 Initialize an upload interaction. This endpoint returns a message which the user must sign in order to upload.

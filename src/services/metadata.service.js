@@ -318,7 +318,7 @@ const getAuthorsByDatasetId = async (req, res) => {
     console.log(err);
   }
   const message = "There are no authors for the specified dataset";
-  return res.status(404).json({ error: message });
+  return res.status(400).json({ error: message });
 };
 
 module.exports = {
