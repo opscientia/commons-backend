@@ -8,8 +8,8 @@ const initializeUpload = require("./routes/initializeUpload");
 const app = express();
 
 const corsOptions = {
-  origin: ["https://commons.opsci.io"],
-  // origin: true,
+  // origin: ["https://commons.opsci.io"],
+  origin: true,
 };
 
 app.use(express.urlencoded({ extended: true }));

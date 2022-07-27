@@ -74,6 +74,27 @@ const getPublishedDatasetById = async (req, res) => {
   return res.status(404).json({ error: message });
 };
 
+const getPublishedDatasetsByUploader = async (req, res) => {
+  console.log(`${new Date().toISOString()} getPublishedDatasetsByUploader: entered`);
+  if (!req.query.uploader) {
+    const msg = "Please dataset uploader with the uploader query parameter";
+    return res.status(400).json({ error: msg });
+  }
+  const uploader = req.query.uploader.toLowerCase();
+  try {
+    // Get dataset first to ensure datasetId refers to a published dataset
+    const dsQuery = { uploader: uploader, published: true };
+    const datasets = await dbWrapper.getDatasets(dsQuery);
+    if (datasets.length > 0) {
+      return res.status(200).json(datasets);
+    }
+  } catch (err) {
+    console.log(err);
+  }
+  const msg = `Found no datasets whose uploader is ${uploader}`;
+  return res.status(404).json({ error: msg });
+};
+
 const searchPublishedDatasets = async (req, res) => {
   console.log(`${new Date().toISOString()} searchPublishedDatasets: entered`);
   const searchStr = req.query.searchStr;
@@ -324,6 +345,7 @@ const getAuthorsByDatasetId = async (req, res) => {
 module.exports = {
   getDatasetMetadata: getDatasetMetadata,
   getPublishedDatasets: getPublishedDatasets,
+  getPublishedDatasetsByUploader: getPublishedDatasetsByUploader,
   searchPublishedDatasets: searchPublishedDatasets,
   publishDataset: publishDataset,
   getPublishedChunks: getPublishedChunksByDatasetId,

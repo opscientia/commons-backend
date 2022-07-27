@@ -18,6 +18,7 @@ Its purposes are:
 
 - **GET** `/metadata/datasets/`
 - **GET** `/metadata/datasets/published/`
+- **GET** `/metadata/datasets/published/byUploader`
 - **GET** `/metadata/datasets/published/search/`
 - **POST** `/metadata/datasets/publish/`
 - **GET** `/metadata/chunks/published/`
@@ -184,6 +185,70 @@ If no "id" parameter is found in the query, all published datasets are returned.
     - response:
       ```JSON
       { "error": "No published datasets have the specified id" }
+      ```
+
+### **GET** `/metadata/datasets/published/byUploader?uploader=<uploader>`
+
+Get the datasets by uploader.
+
+- Parameters
+
+  | name       | description                   | type   | in    | required |
+  | ---------- | ----------------------------- | ------ | ----- | -------- |
+  | `uploader` | Uploader's blockchain address | string | query | false    |
+
+- Example
+
+  ```bash
+  curl -X GET 'https://localhost:3005/metadata/datasets/published/byUploader?uploader=0xdbd6b2c02338919EdAa192F5b60F5e5840A50074'
+  ```
+
+- Responses
+
+  - 200
+
+    - Successfully retrieved dataset metadata for datasets uploaded by the given address.
+    - Example response:
+
+      ```JSON
+
+      [
+        {
+            "_id": new ObjectId("62c8662757a389a8fbd645e9"),
+            "title": "Example Title",
+            "description": "Example description",
+            "authors": ["Author 1", "Author 2"],
+            "uploader": "0x0000000000000000000000000000000000000000", // blockchain address
+            "license": "MIT",
+            "doi": "123",
+            "keywords": ["Keyword 1", "Keyword 2"],
+            "published": false,
+            "size": 10,
+            "standard": {
+                "bids": {
+                    "validated": true,
+                    "version": "1.9.0",
+                    "deidentified": true,
+                    "modality": [],
+                    "tasks": [],
+                    "warnings": "",
+                    "errors": ""
+                }
+            },
+            "miscellaneous": { "partOf": "DANDI" },
+            "chunkIds": [new ObjectId("62c8662757a389a8fbd645ea")] // array of MongoDB ObjectId objects
+        },
+        {
+          ...
+        }
+      ]
+
+      ```
+
+  - 404
+    - response:
+      ```JSON
+      { "error": "Found no datasets whose uploader is 0x123" }
       ```
 
 ### **GET** `/metadata/datasets/published/search?searchStr=<searchStr>`
