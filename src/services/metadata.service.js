@@ -7,6 +7,7 @@ const { ethers } = require("ethers");
 const { packToFs } = require("ipfs-car/pack/fs");
 const { FsBlockStore } = require("ipfs-car/blockstore/fs");
 const { unpackToFs } = require("ipfs-car/unpack/fs");
+const sanitizeHtml = require("sanitize-html");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 const utils = require("../utils/utils");
@@ -123,13 +124,13 @@ const searchPublishedDatasets = async (req, res) => {
  */
 const publishDataset = async (req, res) => {
   console.log(`${new Date().toISOString()} publishDataset: entered`);
-  const address = req.body.address?.toLowerCase();
-  const signature = req.body.signature;
-  const datasetId = req.body.datasetId;
-  const title = req.body.title;
-  const description = req.body.description;
-  const authorsStrArr = req.body.authors?.split(",");
-  const keywords = req.body.keywords?.split(",");
+  const address = sanitizeHtml(req.body.address?.toLowerCase());
+  const signature = sanitizeHtml(req.body.signature);
+  const datasetId = sanitizeHtml(req.body.datasetId);
+  const title = sanitizeHtml(req.body.title);
+  const description = sanitizeHtml(req.body.description);
+  const authorsStrArr = req.body.authors?.split(",")?.map((author) => sanitizeHtml(author));
+  const keywords = req.body.keywords?.split(",")?.map((keyword) => sanitizeHtml(keyword));
   if (!address || !signature || !datasetId || !title || !description || !authorsStrArr) {
     console.log(`${new Date().toISOString()} publishDataset: parameter(s) not provided`);
     console.log(`parameters: [${address}, ${signature}, ${datasetId}, ${title}, ${description}, ${authorsStrArr}]`);
