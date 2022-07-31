@@ -41,5 +41,5 @@ module.exports.assertSignerIsAddress = async (message, signature, address) => {
     console.log(err);
     console.log("Malformed signature");
   }
-  return signer == address;
+  return signer.toLowerCase() == address.toLowerCase();
 };
