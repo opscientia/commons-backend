@@ -10,9 +10,32 @@ Its purposes are:
 
 ## Contents
 
+- [Contributing](#contributing)
 - [Endpoints](#endpoints)
 - [Architecture](#architecture)
 - [Metadata Schema](#metadata-schema)
+
+## Contributing
+
+It is recommended that you run this project with node v16. If you have [nvm](https://github.com/nvm-sh/nvm), you can install node v16 with the following command.
+
+    nvm install 16
+
+Use node v16 with the following command.
+
+    nvm use 16
+
+Install dependencies.
+
+    npm install
+
+This project makes use of environment variables. Copy .env-example to .env, and set the variables in the .env file.
+
+    cp .env-example .env
+
+Run the server.
+
+    npm run start
 
 ## Endpoints
 
