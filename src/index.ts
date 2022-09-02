@@ -1,4 +1,4 @@
-import { Express } from "express";
+import express from "express";
 import cors from 'cors';
 import Metadata from "./routes/metadata";
 import UploadToEstuary from "./routes/uploadToEstuary";
@@ -20,4 +20,4 @@ app.use("/metadata", Metadata);
 app.use("/uploadToEstuary", UploadToEstuary);
 app.use("/initializeUpload", InitializeUpload);
 
-module.exports = app;
+export default app;

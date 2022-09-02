@@ -13,7 +13,7 @@ const url = process.env.MONGO_DB_URL;
   mongoClient.connect().then(() => console.log("Connected to database server"));
 process.on("SIGTERM", async () => await mongoClient.close());
 
-module.exports = {
-  mongoClient: mongoClient,
-  msgCache: msgCache,
+export {
+  mongoClient,
+  msgCache,
 };

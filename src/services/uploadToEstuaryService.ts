@@ -4,18 +4,18 @@ import fs from "fs";
 import fse from "fs-extra";
 import FormData from "form-data";
 import { ethers } from "ethers";
-import Web3 from "web3";
+import web3 from "web3";
 import mongodb from "mongodb";
 import validate from "bids-validator";
 import { packToFs } from "ipfs-car/pack/fs";
 import { FsBlockStore } from "ipfs-car/blockstore/fs";
 import { msgCache } from "../init";
-import { dbWrapper } from "../utils/dbWrapper";
+import dbWrapper  from "../utils/dbWrapper";
 import estuaryWrapper from "../utils/estuaryWrapper";
 import utils from "../utils/utils";
 
-const runBidsValidation = async (pathToDirectory: string) => {
-  return new Promise<void>((resolve) => {
+async function runBidsValidation(pathToDirectory: string) {
+  return new Promise<any>((resolve) => {
     // const dirName = values.files[0].webkitRelativePath.split('/')[1]
     // const defaultConfig = `${dirName}/.bids-validator-config.json`
     let valid = false;
@@ -31,7 +31,7 @@ const runBidsValidation = async (pathToDirectory: string) => {
       (issues: { errors: string | any[] }, summary: any) => {
         if (issues.errors.length > 0) {
           console.log("BIDS validation failed");
-          resolve();
+          resolve({});
         } else {
           console.log("BIDS validation succeeded");
           resolve({ summary: summary, issues: issues });
@@ -42,7 +42,7 @@ const runBidsValidation = async (pathToDirectory: string) => {
 };
 
 // Validate input for uploadFile()
-const runInitialInputValidation = async (req) => {
+async function runInitialInputValidation(req: any) {
   if (!req.body.address || !req.files || !req.body.signature) {
     console.log("Missing argument");
     await utils.removeFiles(req.files[0].destination);
@@ -69,9 +69,7 @@ const runInitialInputValidation = async (req) => {
     return { error: `No secret message for ${address} at time ${Date.now()}` };
   }
   const msgHash = web3.utils.sha3(secretMessage);
-  const signer = (
-    await ethers.utils.recoverAddress(msgHash, req.body.signature)
-  ).toLowerCase();
+  const signer = ethers.utils.recoverAddress(msgHash, req.body.signature).toLowerCase();
   if (signer != address) {
     console.log(`signer != address\nsigner: ${signer}\naddress: ${address}`);
     await utils.removeFiles(req.files[0].destination);
@@ -105,7 +103,7 @@ const runInitialInputValidation = async (req) => {
 
 // Move uploaded files into the folders that the user had them in.
 // E.g., if user uploaded /testdir/abc.txt, move the local file abc.txt to <tmpFolder>/testdir/abc.txt
-const moveFilesToCorrectFolders = async (req) => {
+async function moveFilesToCorrectFolders(req: any){
   const files = [];
   const timestampedFolder = req.files[0].destination;
   for (const file of req.files) {
@@ -158,7 +156,7 @@ const moveFilesToCorrectFolders = async (req) => {
  * If no .bidsignore file exists in root of specified dir, one is created.
  * @param dir Must end with forward slash ('/').
  */
-const addBidsIgnoreRules = async (dir) => {
+async function addBidsIgnoreRules(dir: string){
   const linesArr = [
     "*~",
     "tmp_dcm2bids",
@@ -179,12 +177,12 @@ const addBidsIgnoreRules = async (dir) => {
   return false;
 };
 
-const generateCommonsFile = (file, chunkId) => {
+async function generateCommonsFile(file: any, chunkId: any){
   if (!file.path.startsWith("/")) {
     file.path = "/" + file.path;
   }
   return {
-    _id: mongodb.ObjectId(),
+    _id: new mongodb.ObjectId(),
     chunkId: chunkId,
     name: file.name,
     path: file.path,
@@ -197,9 +195,9 @@ const generateCommonsFile = (file, chunkId) => {
  * @param params Object containing every value to store in the dataset object,
  *        except "_id" and "published" which are populated by this function.
  */
-const generateDataset = (params) => {
+const generateDataset = (params: any) => {
   return {
-    _id: mongodb.ObjectId(),
+    _id: new mongodb.ObjectId(),
     title: params.title,
     description: params.description, // TODO: Extract from dataset_description.json if it exists
     authors: params.authors || [], // TODO: Extract from dataset_description.json if it exists
@@ -224,9 +222,9 @@ const generateDataset = (params) => {
   };
 };
 
-const generateChunk = (params) => {
+const generateChunk = (params: any) => {
   return {
-    _id: mongodb.ObjectId(),
+    _id: new mongodb.ObjectId(),
     datasetId: params.datasetId,
     path: params.path || "/",
     doi: params.doi || "",
@@ -296,7 +294,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
   for (const tmpFile of files) {
     let commonsFile;
     for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
-      commonsFile = generateCommonsFile(tmpFile, chunk._id);
+      commonsFile = await generateCommonsFile(tmpFile, chunk._id);
       acknowledged = await dbWrapper.insertCommonsFile(commonsFile);
       if (acknowledged) break;
     }
@@ -405,7 +403,7 @@ const uploadFiles = async (req, res) => {
     console.log(
       `${new Date().toISOString()} User has already uploaded this file. Removing the duplicate file from Estuary and exiting.`
     );
-    await estuaryWrapper.deleteFile(newUploadEstuaryId);
+    await estuaryWrapper.deleteFile(newUploadEstuaryId, 3);
     return res
       .status(400)
       .json({ error: "This dataset has already been uploaded." });
@@ -439,7 +437,7 @@ const uploadFiles = async (req, res) => {
     console.log(
       `${new Date().toISOString()} Failed to insert metadata into database. Removing file from Estuary and exiting.`
     );
-    await estuaryWrapper.deleteFile(newUploadEstuaryId);
+    await estuaryWrapper.deleteFile(newUploadEstuaryId, 3);
     return res
       .status(400)
       .json({ error: "Failed to insert metadata into database." });
@@ -454,6 +452,6 @@ const uploadFiles = async (req, res) => {
   });
 };
 
-module.exports = {
-  uploadFiles: uploadFiles,
+export default {
+  uploadFiles
 };

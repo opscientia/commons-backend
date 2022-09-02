@@ -1,6 +1,6 @@
 import * as fse from 'fs-extra';
 import * as express from 'express';
-import * as multer from 'multer';
+import multer from 'multer';
 import uploadToEstuaryService from '../services/uploadToEstuaryService';
 
 export default function UploadToEstuary() {
@@ -25,6 +25,3 @@ export default function UploadToEstuary() {
   
   router.post("/", upload.array("data"), uploadToEstuaryService.uploadFiles);
 }
-
-
-module.exports = router;

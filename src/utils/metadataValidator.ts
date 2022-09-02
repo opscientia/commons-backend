@@ -54,14 +54,16 @@ const commonsFileSchema = yup.object().shape({
   documentation: yup.string(),
 });
 
-module.exports.validateDataset = async (dataset: any) => {
+export async function validateDataset(dataset: any):Promise<boolean> {
   return await datasetSchema.isValid(dataset);
 };
 
-module.exports.validateChunk = async (chunk: any) => {
+export async function validateChunk(chunk: any): Promise<boolean> {
   return await chunkSchema.isValid(chunk);
 };
 
-module.exports.validateCommonsFile = async (commonsFile: any) => {
+export async function validateCommonsFile(commonsFile: any): Promise<boolean>{
   return await commonsFileSchema.isValid(commonsFile);
 };
+
+export default { validateChunk, validateCommonsFile, validateDataset};

@@ -7,8 +7,8 @@ import { ethers } from "ethers";
 import { packToFs } from "ipfs-car/pack/fs";
 import { FsBlockStore } from "ipfs-car/blockstore/fs";
 import { unpackToFs } from "ipfs-car/unpack/fs";
-import santizeHtml from "sanitize-html";
-import { dbwrapper } from "../utils/dbWrapper";
+import sanitizeHtml from "sanitize-html";
+import dbWrapper from "../utils/dbWrapper";
 import estuaryWrapper from "../utils/estuaryWrapper";
 import utils from "../utils/utils";
 import { fetchJson } from "ethers/lib/utils";
@@ -17,7 +17,7 @@ import { fetchJson } from "ethers/lib/utils";
  * Get dataset metadata for every dataset belonging to the specified address.
  * (Does not require authentication.)
  */
-const getDatasetMetadata = async (req, res) => {
+export async function getDatasetMetadata (req: any, res: any){
   if (!req.query.address) {
     const message =
       "Please specify the dataset uploader with the address query parameter";
@@ -36,7 +36,7 @@ const getDatasetMetadata = async (req, res) => {
     .json({ error: "No datasets for the specified address" });
 };
 
-const getPublishedDatasets = async (req, res) => {
+export async function getPublishedDatasets(req: any, res: any) {
   if (req.query.id) {
     return await getPublishedDatasetById(req, res);
   } else {
@@ -48,7 +48,7 @@ const getPublishedDatasets = async (req, res) => {
  * Get dataset metadata for every published dataset.
  * (Does not require authentication.)
  */
-const getAllPublishedDatasets = async (req, res) => {
+export async function getAllPublishedDatasets(req: any, res: any){
   console.log(`${new Date().toISOString()} getAllPublishedDatasets: entered`);
   try {
     const datasets = await dbWrapper.getDatasets({ published: true });
@@ -59,14 +59,14 @@ const getAllPublishedDatasets = async (req, res) => {
   return res.status(404).json({ error: "There are no published datasets" });
 };
 
-const getPublishedDatasetById = async (req, res) => {
+export async function getPublishedDatasetById(req: any, res: any){
   console.log(`${new Date().toISOString()} getPublishedDatasetById: entered`);
   if (!req.query.id) {
     const message = "Please specify the dataset ID via the id query parameter";
     return res.status(404).json({ error: message });
   }
   try {
-    const query = { _id: mongodb.ObjectId(req.query.id), published: true };
+    const query = { _id: new mongodb.ObjectId(req.query.id), published: true };
     const datasets = await dbWrapper.getDatasets(query);
     if (datasets?.length > 0) {
       return res.status(200).json(datasets[0]);
@@ -78,7 +78,7 @@ const getPublishedDatasetById = async (req, res) => {
   return res.status(404).json({ error: message });
 };
 
-const getPublishedDatasetsByUploader = async (req, res) => {
+export async function getPublishedDatasetsByUploader(req: any, res: any){
   console.log(
     `${new Date().toISOString()} getPublishedDatasetsByUploader: entered`
   );
@@ -101,7 +101,7 @@ const getPublishedDatasetsByUploader = async (req, res) => {
   return res.status(404).json({ error: msg });
 };
 
-const searchPublishedDatasets = async (req, res) => {
+export async function searchPublishedDatasets(req: any, res: any) {
   console.log(`${new Date().toISOString()} searchPublishedDatasets: entered`);
   const searchStr = req.query.searchStr;
   if (!searchStr) {
@@ -128,7 +128,7 @@ const searchPublishedDatasets = async (req, res) => {
  * On the dataset specified by the provided datasetId, set published to true.
  * body params: address, signature, datasetId, title, description, authors, keywords
  */
-const publishDataset = async (req, res) => {
+export async function publishDataset (req: any, res: any){
   console.log(`${new Date().toISOString()} publishDataset: entered`);
   const address = sanitizeHtml(req.body.address?.toLowerCase());
   const signature = sanitizeHtml(req.body.signature);
@@ -137,10 +137,10 @@ const publishDataset = async (req, res) => {
   const description = sanitizeHtml(req.body.description);
   const authorsStrArr = req.body.authors
     ?.split(",")
-    ?.map((author) => sanitizeHtml(author));
+    ?.map((author: string) => sanitizeHtml(author));
   const keywords = req.body.keywords
     ?.split(",")
-    ?.map((keyword) => sanitizeHtml(keyword));
+    ?.map((keyword: string) => sanitizeHtml(keyword));
   if (
     !address ||
     !signature ||
@@ -171,8 +171,8 @@ const publishDataset = async (req, res) => {
   }
 
   // TODO!! -- Find a way to check that an author has not already been added. Perhaps require ORCID
-  const authorIds = [];
-  const authors = authorsStrArr.map((authorStr) => {
+  const authorIds: mongodb.ObjectId[] = [];
+  const authors = authorsStrArr.map((authorStr: any) => {
     const authorId = new mongodb.ObjectId();
     authorIds.push(authorId);
     return {
@@ -189,7 +189,7 @@ const publishDataset = async (req, res) => {
   }
   let success = false;
   try {
-    const query = { uploader: address, _id: mongodb.ObjectId(datasetId) };
+    const query = { uploader: address, _id: new mongodb.ObjectId(datasetId) };
     const updateDocument = {
       $set: {
         published: true,
@@ -219,7 +219,7 @@ const publishDataset = async (req, res) => {
 };
 
 // Get a dataset's child chunks
-const getPublishedChunksByDatasetId = async (req, res) => {
+export async function getPublishedChunksByDatasetId(req: any, res: any){
   console.log(
     `${new Date().toISOString()} getPublishedChunksByDatasetId: entered`
   );
@@ -231,12 +231,12 @@ const getPublishedChunksByDatasetId = async (req, res) => {
   try {
     // Get dataset first to ensure datasetId refers to a published dataset
     const dsQuery = {
-      _id: mongodb.ObjectId(req.query.datasetId),
+      _id: new mongodb.ObjectId(req.query.datasetId),
       published: true,
     };
     const datasets = await dbWrapper.getDatasets(dsQuery);
     if (datasets.length > 0) {
-      const chunksQuery = { datasetId: mongodb.ObjectId(req.query.datasetId) };
+      const chunksQuery = { datasetId: new mongodb.ObjectId(req.query.datasetId) };
       const chunks = await dbWrapper.getChunks(chunksQuery);
       return res.status(200).json(chunks);
     }
@@ -251,7 +251,7 @@ const getPublishedChunksByDatasetId = async (req, res) => {
  * Get file metadata for every file belonging to the specified address.
  * (Does not require authentication. Only modifications to a user's files require authentication.)
  */
-const getFileMetadata = async (req, res) => {
+export async function getFileMetadata(req: any, res: any){
   console.log(`${new Date().toISOString()} getFileMetadata: entered`);
   if (!req.query.address) {
     const message =
@@ -286,7 +286,7 @@ const getFileMetadata = async (req, res) => {
       },
     };
     const files = await dbWrapper.getCommonsFiles(filesQuery);
-    const filesWithEstIds = files.map((file) => ({
+    const filesWithEstIds = files.map((file: any) => ({
       ...file,
       // TODO: There must be a better way to return the estuaryIds of the datasets
       estuaryId: fileIdToEstuaryId[file._id],
@@ -303,7 +303,7 @@ const getFileMetadata = async (req, res) => {
  * If path is specified, only the file designated by path is deleted. If path is not specified,
  * the entire CAR file designated by estuaryId is deleted.
  */
-const deleteFileMetadata = async (req, res) => {
+export async function deleteFileMetadata  (req: any , res: any): Promise<any> {
   console.log(`${new Date().toISOString()} deleteFileMetadata: Entered`);
   if (!req.query.address || !req.query.estuaryId || !req.query.signature) {
     return res.status(400).json({ error: "Missing parameter(s)" });
@@ -375,7 +375,7 @@ const deleteFileMetadata = async (req, res) => {
     .json({ error: "An unknown error occurred. Failed to delete dataset." });
 };
 
-const getAuthorsByDatasetId = async (req, res) => {
+export async function getAuthorsByDatasetId(req:any, res:any){
   console.log(`${new Date().toISOString()} getAuthorsByDatasetId: entered`);
   if (!req.query.datasetId) {
     const message =
@@ -384,13 +384,13 @@ const getAuthorsByDatasetId = async (req, res) => {
   }
   try {
     const query = {
-      _id: mongodb.ObjectId(req.query.datasetId),
+      _id: new mongodb.ObjectId(req.query.datasetId),
       published: true,
     };
     const datasets = await dbWrapper.getDatasets(query);
     if (datasets?.length > 0) {
-      const authorIds = datasets[0].authors.map((idStr) =>
-        mongodb.ObjectId(idStr)
+      const authorIds = datasets[0].authors.map((idStr : any) =>
+        new mongodb.ObjectId(idStr)
       );
       const authorsQuery = { _id: { $in: authorIds } };
       const authors = await dbWrapper.getAuthors(authorsQuery);
@@ -405,14 +405,14 @@ const getAuthorsByDatasetId = async (req, res) => {
   return res.status(400).json({ error: message });
 };
 
-module.exports = {
-  getDatasetMetadata: getDatasetMetadata,
-  getPublishedDatasets: getPublishedDatasets,
-  getPublishedDatasetsByUploader: getPublishedDatasetsByUploader,
-  searchPublishedDatasets: searchPublishedDatasets,
-  publishDataset: publishDataset,
-  getPublishedChunks: getPublishedChunksByDatasetId,
-  getFileMetadata: getFileMetadata,
-  deleteFileMetadata: deleteFileMetadata,
-  getAuthorsByDatasetId: getAuthorsByDatasetId,
+export default {
+  getDatasetMetadata,
+  getPublishedDatasets,
+  getPublishedDatasetsByUploader,
+  searchPublishedDatasets,
+  publishDataset,
+  getPublishedChunksByDatasetId,
+  getFileMetadata,
+  deleteFileMetadata,
+  getAuthorsByDatasetId,
 };
