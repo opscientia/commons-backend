@@ -10,7 +10,7 @@ import { validate } from "bids-Validator";
 import { packToFs } from "ipfs-car/pack/fs";
 import { FsBlockStore } from "ipfs-car/blockstore/fs";
 import { msgCache } from "../init";
-import dbWrapper  from "../utils/dbWrapper";
+import dbWrapper from "../utils/dbWrapper";
 import estuaryWrapper from "../utils/estuaryWrapper";
 import utils from "../utils/utils";
 
@@ -40,7 +40,7 @@ async function runBidsValidation(pathToDirectory: string): Promise<any> {
       }
     );
   });
-};
+}
 
 // Validate input for uploadFile()
 async function runInitialInputValidation(req: any) {
@@ -69,8 +69,11 @@ async function runInitialInputValidation(req: any) {
     await utils.removeFiles(req.files[0].destination);
     return { error: `No secret message for ${address} at time ${Date.now()}` };
   }
+  //@ts-expect-error secretMessage type unknown due to node-cache lib
   const msgHash = web3.utils.sha3(secretMessage);
-  const signer = ethers.utils.recoverAddress(msgHash, req.body.signature).toLowerCase();
+  const signer = ethers.utils
+    .recoverAddress(msgHash!, req.body.signature)
+    .toLowerCase();
   if (signer != address) {
     console.log(`signer != address\nsigner: ${signer}\naddress: ${address}`);
     await utils.removeFiles(req.files[0].destination);
@@ -100,11 +103,11 @@ async function runInitialInputValidation(req: any) {
   }
 
   return { success: "Initial input validation succeeded." };
-};
+}
 
 // Move uploaded files into the folders that the user had them in.
 // E.g., if user uploaded /testdir/abc.txt, move the local file abc.txt to <tmpFolder>/testdir/abc.txt
-async function moveFilesToCorrectFolders(req: any){
+async function moveFilesToCorrectFolders(req: any) {
   const files = [];
   const timestampedFolder = req.files[0].destination;
   for (const file of req.files) {
@@ -150,14 +153,14 @@ async function moveFilesToCorrectFolders(req: any){
     }
   }
   return files;
-};
+}
 
 /**
  * Add certain ignore rules to .bidsignore file in root of specified dir.
  * If no .bidsignore file exists in root of specified dir, one is created.
  * @param dir Must end with forward slash ('/').
  */
-async function addBidsIgnoreRules(dir: string){
+async function addBidsIgnoreRules(dir: string) {
   const linesArr = [
     "*~",
     "tmp_dcm2bids",
@@ -176,9 +179,9 @@ async function addBidsIgnoreRules(dir: string){
     console.log(err);
   }
   return false;
-};
+}
 
-async function generateCommonsFile(file: any, chunkId: any){
+async function generateCommonsFile(file: any, chunkId: any) {
   if (!file.path.startsWith("/")) {
     file.path = "/" + file.path;
   }
@@ -190,7 +193,7 @@ async function generateCommonsFile(file: any, chunkId: any){
     size: file.size,
     documentation: "",
   };
-};
+}
 
 /**
  * @param params Object containing every value to store in the dataset object,
@@ -245,8 +248,14 @@ const generateChunk = (params: any) => {
  * @param files File objects containing metadata (e.g., name, path, chunkId)
  * @returns True if all db requests were acknowledged, false otherwise
  */
-const insertMetadata = async (datasetMetadata:any, chunkMetadata:any, files: any[]) => {
-  let acknowledged, dataset :any, chunk:any = undefined; //TODO: implement interface types
+const insertMetadata = async (
+  datasetMetadata: any,
+  chunkMetadata: any,
+  files: any[]
+) => {
+  let acknowledged,
+    dataset: any,
+    chunk: any = undefined; //TODO: implement interface types
   // Max insert attempts. Try inserting multiple time in case of _id collision or other errors
   const maxAttempts = 3;
 
@@ -293,7 +302,7 @@ const insertMetadata = async (datasetMetadata:any, chunkMetadata:any, files: any
   // commonsFiles
   const fileIds = [];
   for (const tmpFile of files) {
-    let commonsFile:any; //TODO: Implement interface types
+    let commonsFile: any; //TODO: Implement interface types
     for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
       commonsFile = await generateCommonsFile(tmpFile, chunk._id);
       acknowledged = await dbWrapper.insertCommonsFile(commonsFile);
@@ -327,7 +336,7 @@ const insertMetadata = async (datasetMetadata:any, chunkMetadata:any, files: any
   return updateSuccess;
 };
 
-export async function  uploadFiles (req:any, res:any): Promise<any>{
+export async function uploadFiles(req: any, res: any): Promise<any> {
   // TODO: chunking
 
   console.log(`${new Date().toISOString()} uploadFile: Entered`);
@@ -451,8 +460,8 @@ export async function  uploadFiles (req:any, res:any): Promise<any>{
     message: `Successfully uploaded dataset for address ${address}.`,
     cid: newUploadCid,
   });
-};
+}
 
 export default {
-  uploadFiles
+  uploadFiles,
 };
