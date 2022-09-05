@@ -31,11 +31,11 @@ const datasetSchema = yup.object().shape({
     bids: bidsValidationSchema,
     // Might add more standards here
   }),
-  chunkIds: yup.array().of(yup.mixed((input: any) => input instanceof mongodb.ObjectId)), // chunkIds
+  chunkIds: yup.array().of(yup.mixed().__inputType((input: any) => input instanceof mongodb.ObjectId)), // chunkIds
 });
 
 const chunkSchema = yup.object().shape({
-  datasetId: yup.mixed((input: any) => input instanceof mongodb.ObjectId).required(),
+  datasetId: yup.mixed().__inputType((input: any) => input instanceof mongodb.ObjectId).required(),
   path: yup.string(),
   doi: yup.string(),
   storageIds: yup
@@ -47,13 +47,13 @@ const chunkSchema = yup.object().shape({
     .required(),
   fileIds: yup
     .array()
-    .of(yup.mixed((input: any) => input instanceof mongodb.ObjectId))
+    .of(yup.mixed().__inputType((input: any) => input instanceof mongodb.ObjectId))
     .required(),
   size: yup.number().positive(),
 });
 
 const commonsFileSchema = yup.object().shape({
-  chunkId: yup.mixed((input: any) => input instanceof mongodb.ObjectId).required(),
+  chunkId: yup.mixed().__inputType((input: any) => input instanceof mongodb.ObjectId).required(),
   name: yup.string(),
   path: yup.string(),
   size: yup.number(),
