@@ -13,6 +13,7 @@ import { msgCache } from "../init";
 import dbWrapper  from "../utils/dbWrapper";
 import estuaryWrapper from "../utils/estuaryWrapper";
 import utils from "../utils/utils";
+import type from 
 
 async function runBidsValidation(pathToDirectory: string) {
   return new Promise<any>((resolve) => {

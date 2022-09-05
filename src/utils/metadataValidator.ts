@@ -1,5 +1,11 @@
 import yup from 'yup';
 import mongodb from 'mongodb';
+interface BidsValidation {
+  validated: boolean;
+  version: string;
+  deidentified: boolean;
+
+}
 
 // The values here include return values from the BIDS Validator
 const bidsValidationSchema = yup.object().shape({
