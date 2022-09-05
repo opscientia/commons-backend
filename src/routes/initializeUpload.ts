@@ -1,8 +1,8 @@
-import * as express from "express";
+import { Router }from "express";
 import initializeUpload  from '../services/initializeUploadService';
 
 export default function InitializeUpload () {
-    const router = express.Router();
+    const router = Router();
 
     router.get("/", initializeUpload);
 }

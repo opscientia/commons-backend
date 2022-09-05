@@ -37,13 +37,7 @@ export async function getDatasetMetadata (req: any, res: any){
     .json({ error: "No datasets for the specified address" });
 };
 
-export async function getPublishedDatasets(req: any, res: any) {
-  if (req.query.id) {
-    return await getPublishedDatasetById(req, res);
-  } else {
-    return await getAllPublishedDatasets(req, res);
-  }
-};
+
 
 /**
  * Get dataset metadata for every published dataset.
@@ -59,6 +53,7 @@ export async function getAllPublishedDatasets(req: any, res: any){
   }
   return res.status(404).json({ error: "There are no published datasets" });
 };
+
 
 export async function getPublishedDatasetById(req: any, res: any){
   console.log(`${new Date().toISOString()} getPublishedDatasetById: entered`);
@@ -77,6 +72,14 @@ export async function getPublishedDatasetById(req: any, res: any){
   }
   const message = "There is no published dataset with the specified id";
   return res.status(404).json({ error: message });
+};
+
+export async function getPublishedDatasets(req: any, res: any) {
+  if (req.query.id) {
+    return await getPublishedDatasetById(req, res);
+  } else {
+    return await getAllPublishedDatasets(req, res);
+  }
 };
 
 export async function getPublishedDatasetsByUploader(req: any, res: any){

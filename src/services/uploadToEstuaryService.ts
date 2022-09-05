@@ -14,12 +14,12 @@ import dbWrapper from "../utils/dbWrapper";
 import estuaryWrapper from "../utils/estuaryWrapper";
 import utils from "../utils/utils";
 
-async function runBidsValidation(pathToDirectory: string): Promise<any> {
+export async function runBidsValidation(pathToDirectory: string): Promise<any> {
   return new Promise<any>((resolve) => {
     // const dirName = values.files[0].webkitRelativePath.split('/')[1]
     // const defaultConfig = `${dirName}/.bids-validator-config.json`
     let valid = false;
-    //@ts-ignore
+    //@ts-ignore as bids-validation lib doesn't have well defined types 
     validate.default.BIDS(
       pathToDirectory,
       {
@@ -43,7 +43,7 @@ async function runBidsValidation(pathToDirectory: string): Promise<any> {
 }
 
 // Validate input for uploadFile()
-async function runInitialInputValidation(req: any) {
+export async function runInitialInputValidation(req: any) {
   if (!req.body.address || !req.files || !req.body.signature) {
     console.log("Missing argument");
     await utils.removeFiles(req.files[0].destination);
@@ -107,7 +107,7 @@ async function runInitialInputValidation(req: any) {
 
 // Move uploaded files into the folders that the user had them in.
 // E.g., if user uploaded /testdir/abc.txt, move the local file abc.txt to <tmpFolder>/testdir/abc.txt
-async function moveFilesToCorrectFolders(req: any) {
+export async function moveFilesToCorrectFolders(req: any) {
   const files = [];
   const timestampedFolder = req.files[0].destination;
   for (const file of req.files) {
@@ -160,7 +160,7 @@ async function moveFilesToCorrectFolders(req: any) {
  * If no .bidsignore file exists in root of specified dir, one is created.
  * @param dir Must end with forward slash ('/').
  */
-async function addBidsIgnoreRules(dir: string) {
+async function addBidsIgnoreRules(dir: string): Promise<boolean> {
   const linesArr = [
     "*~",
     "tmp_dcm2bids",
@@ -180,7 +180,7 @@ async function addBidsIgnoreRules(dir: string) {
   }
   return false;
 }
-
+// TODO implement Chunk interface
 async function generateCommonsFile(file: any, chunkId: any) {
   if (!file.path.startsWith("/")) {
     file.path = "/" + file.path;
@@ -199,7 +199,8 @@ async function generateCommonsFile(file: any, chunkId: any) {
  * @param params Object containing every value to store in the dataset object,
  *        except "_id" and "published" which are populated by this function.
  */
-const generateDataset = (params: any) => {
+// TODO implement Dataset interface
+function generateDataset(params: any){
   return {
     _id: new mongodb.ObjectId(),
     title: params.title,
@@ -225,8 +226,8 @@ const generateDataset = (params: any) => {
     chunkIds: params.chunkIds || [],
   };
 };
-
-const generateChunk = (params: any) => {
+// TODO implement Chunk interface
+function generateChunk(params: any){
   return {
     _id: new mongodb.ObjectId(),
     datasetId: params.datasetId,
@@ -248,11 +249,11 @@ const generateChunk = (params: any) => {
  * @param files File objects containing metadata (e.g., name, path, chunkId)
  * @returns True if all db requests were acknowledged, false otherwise
  */
-const insertMetadata = async (
+export async function insertMetadata (
   datasetMetadata: any,
   chunkMetadata: any,
   files: any[]
-) => {
+): Promise<boolean>{
   let acknowledged,
     dataset: any,
     chunk: any = undefined; //TODO: implement interface types

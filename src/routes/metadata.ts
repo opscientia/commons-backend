@@ -1,9 +1,9 @@
-import * as express from "express";
+import { Router } from "express";
 
 import metadataService from "../services/metadataService" ;
 
 export default function Metadata (){
-    const router = express.Router();
+    const router = Router();
 
     router.get("/datasets/", metadataService.getDatasetMetadata);
     router.get("/datasets/published", metadataService.getPublishedDatasets);

@@ -1,10 +1,10 @@
 import * as fse from 'fs-extra';
-import * as express from 'express';
+import { Router } from 'express';
 import multer from 'multer';
 import uploadToEstuaryService from '../services/uploadToEstuaryService';
 
 export default function UploadToEstuary() {
-  const router = express.Router();
+  const router = Router();
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
       const dir = `./estuaryUploads/${Date.now()}`;
