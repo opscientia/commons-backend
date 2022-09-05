@@ -12,6 +12,7 @@ import dbWrapper from "../utils/dbWrapper";
 import estuaryWrapper from "../utils/estuaryWrapper";
 import utils from "../utils/utils";
 import { fetchJson } from "ethers/lib/utils";
+import { TypeOf } from "yup";
 
 /**
  * Get dataset metadata for every dataset belonging to the specified address.
@@ -271,9 +272,10 @@ export async function getFileMetadata(req: any, res: any){
         $in: chunkIds,
       },
     };
+    
     const chunks = await dbWrapper.getChunks(chunksQuery);
     const fileIdToEstuaryId = {};
-    const fileIds = [];
+    let fileIds: string[] = [];
     for (const chunk of chunks) {
       for (const fileId of chunk.fileIds) {
         fileIdToEstuaryId[fileId] = chunk.storageIds.estuaryId;

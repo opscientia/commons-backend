@@ -1,3 +1,4 @@
-declare module 'bids-Validator'{
-    function validate(): boolean;
-};
+declare module'bids-Validator'{
+     export function validate(): boolean {
+     }
+}

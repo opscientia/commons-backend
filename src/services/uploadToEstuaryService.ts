@@ -6,20 +6,20 @@ import FormData from "form-data";
 import { ethers } from "ethers";
 import web3 from "web3";
 import mongodb from "mongodb";
-import validate from "bids-validator";
+import { validate } from "bids-Validator";
 import { packToFs } from "ipfs-car/pack/fs";
 import { FsBlockStore } from "ipfs-car/blockstore/fs";
 import { msgCache } from "../init";
 import dbWrapper  from "../utils/dbWrapper";
 import estuaryWrapper from "../utils/estuaryWrapper";
 import utils from "../utils/utils";
-import type from 
 
-async function runBidsValidation(pathToDirectory: string) {
+async function runBidsValidation(pathToDirectory: string): Promise<any> {
   return new Promise<any>((resolve) => {
     // const dirName = values.files[0].webkitRelativePath.split('/')[1]
     // const defaultConfig = `${dirName}/.bids-validator-config.json`
     let valid = false;
+    //@ts-ignore
     validate.default.BIDS(
       pathToDirectory,
       {
@@ -245,8 +245,8 @@ const generateChunk = (params: any) => {
  * @param files File objects containing metadata (e.g., name, path, chunkId)
  * @returns True if all db requests were acknowledged, false otherwise
  */
-const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
-  let acknowledged, dataset, chunk;
+const insertMetadata = async (datasetMetadata:any, chunkMetadata:any, files: any[]) => {
+  let acknowledged, dataset :any, chunk:any = undefined; //TODO: implement interface types
   // Max insert attempts. Try inserting multiple time in case of _id collision or other errors
   const maxAttempts = 3;
 
@@ -271,7 +271,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
   // Chunk
   for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
     chunk = generateChunk({
-      datasetId: dataset._id,
+      datasetId: dataset!._id,
       storageIds: chunkMetadata.storageIds,
       size: chunkMetadata.size,
     });
@@ -293,7 +293,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
   // commonsFiles
   const fileIds = [];
   for (const tmpFile of files) {
-    let commonsFile;
+    let commonsFile:any; //TODO: Implement interface types
     for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
       commonsFile = await generateCommonsFile(tmpFile, chunk._id);
       acknowledged = await dbWrapper.insertCommonsFile(commonsFile);
@@ -308,7 +308,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
       await dbWrapper.deleteCommonsFiles({ _id: { $in: fileIds } });
       return false;
     }
-    fileIds.push(commonsFile._id);
+    fileIds.push(commonsFile!._id);
   }
   const queryFilter = { _id: chunk._id };
   const updateDocument = { $set: { fileIds: fileIds } };
@@ -327,7 +327,7 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
   return updateSuccess;
 };
 
-const uploadFiles = async (req, res) => {
+export async function  uploadFiles (req:any, res:any): Promise<any>{
   // TODO: chunking
 
   console.log(`${new Date().toISOString()} uploadFile: Entered`);

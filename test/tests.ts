@@ -2,12 +2,16 @@ import { expect } from 'chai';
 import axios from "axios";
 require("dotenv").config();
 
-describe("userUploadLimit/", function () {
+interface uploadDetails {
+  address:string;
+};
+
+describe("userUploadLimit/", function ( this: uploadDetails) {
   before( () => {
     this.address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
   });
 
-  it("Should correctly update the upload limit for a user", async function () {
+  it("Should correctly update the upload limit for a user", async function (this: uploadDetails) {
     const firstUploadLimit = 0;
     let url = `http://localhost:3005/userUploadLimit`;
     let data = { address: this.address, limit: firstUploadLimit };
