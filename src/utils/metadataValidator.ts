@@ -1,5 +1,11 @@
-const yup = require("yup");
-const mongodb = require("mongodb");
+import yup from 'yup';
+import mongodb from 'mongodb';
+interface BidsValidation {
+  validated: boolean;
+  version: string;
+  deidentified: boolean;
+
+}
 
 // The values here include return values from the BIDS Validator
 const bidsValidationSchema = yup.object().shape({
@@ -25,11 +31,11 @@ const datasetSchema = yup.object().shape({
     bids: bidsValidationSchema,
     // Might add more standards here
   }),
-  chunkIds: yup.array().of(yup.mixed((input) => input instanceof mongodb.ObjectId)), // chunkIds
+  chunkIds: yup.array().of(yup.mixed().__inputType((input: any) => input instanceof mongodb.ObjectId)), // chunkIds
 });
 
 const chunkSchema = yup.object().shape({
-  datasetId: yup.mixed((input) => input instanceof mongodb.ObjectId).required(),
+  datasetId: yup.mixed().__inputType((input: any) => input instanceof mongodb.ObjectId).required(),
   path: yup.string(),
   doi: yup.string(),
   storageIds: yup
@@ -41,27 +47,29 @@ const chunkSchema = yup.object().shape({
     .required(),
   fileIds: yup
     .array()
-    .of(yup.mixed((input) => input instanceof mongodb.ObjectId))
+    .of(yup.mixed().__inputType((input: any) => input instanceof mongodb.ObjectId))
     .required(),
   size: yup.number().positive(),
 });
 
 const commonsFileSchema = yup.object().shape({
-  chunkId: yup.mixed((input) => input instanceof mongodb.ObjectId).required(),
+  chunkId: yup.mixed().__inputType((input: any) => input instanceof mongodb.ObjectId).required(),
   name: yup.string(),
   path: yup.string(),
   size: yup.number(),
   documentation: yup.string(),
 });
 
-module.exports.validateDataset = async (dataset) => {
+export async function validateDataset(dataset: any):Promise<boolean> {
   return await datasetSchema.isValid(dataset);
 };
 
-module.exports.validateChunk = async (chunk) => {
+export async function validateChunk(chunk: any): Promise<boolean> {
   return await chunkSchema.isValid(chunk);
 };
 
-module.exports.validateCommonsFile = async (commonsFile) => {
+export async function validateCommonsFile(commonsFile: any): Promise<boolean>{
   return await commonsFileSchema.isValid(commonsFile);
 };
+
+export default { validateChunk, validateCommonsFile, validateDataset};

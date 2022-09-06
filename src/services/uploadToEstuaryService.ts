@@ -1,24 +1,25 @@
-const express = require("express");
-const axios = require("axios");
-const fs = require("fs");
-const fse = require("fs-extra");
-const FormData = require("form-data");
-const web3 = require("web3");
-const { ethers } = require("ethers");
-const mongodb = require("mongodb");
-const validate = require("bids-validator");
-const { packToFs } = require("ipfs-car/pack/fs");
-const { FsBlockStore } = require("ipfs-car/blockstore/fs");
-const { msgCache } = require("../init");
-const dbWrapper = require("../utils/dbWrapper");
-const estuaryWrapper = require("../utils/estuaryWrapper");
-const utils = require("../utils/utils");
+import { Express } from "express";
+import axios from "axios";
+import fs from "fs";
+import fse from "fs-extra";
+import FormData from "form-data";
+import { ethers } from "ethers";
+import web3 from "web3";
+import mongodb from "mongodb";
+import { validate } from "bids-Validator";
+import { packToFs } from "ipfs-car/pack/fs";
+import { FsBlockStore } from "ipfs-car/blockstore/fs";
+import { msgCache } from "../init";
+import dbWrapper from "../utils/dbWrapper";
+import estuaryWrapper from "../utils/estuaryWrapper";
+import utils from "../utils/utils";
 
-const runBidsValidation = async (pathToDirectory) => {
-  return new Promise((resolve) => {
+export async function runBidsValidation(pathToDirectory: string): Promise<any> {
+  return new Promise<any>((resolve) => {
     // const dirName = values.files[0].webkitRelativePath.split('/')[1]
     // const defaultConfig = `${dirName}/.bids-validator-config.json`
     let valid = false;
+    //@ts-ignore as bids-validation lib doesn't have well defined types 
     validate.default.BIDS(
       pathToDirectory,
       {
@@ -28,10 +29,10 @@ const runBidsValidation = async (pathToDirectory) => {
         ignoreSubjectConsistency: true,
         // config: defaultConfig
       },
-      (issues, summary) => {
+      (issues: { errors: string | any[] }, summary: any) => {
         if (issues.errors.length > 0) {
           console.log("BIDS validation failed");
-          resolve();
+          resolve({});
         } else {
           console.log("BIDS validation succeeded");
           resolve({ summary: summary, issues: issues });
@@ -39,19 +40,27 @@ const runBidsValidation = async (pathToDirectory) => {
       }
     );
   });
-};
+}
 
 // Validate input for uploadFile()
-const runInitialInputValidation = async (req) => {
+export async function runInitialInputValidation(req: any) {
   if (!req.body.address || !req.files || !req.body.signature) {
     console.log("Missing argument");
     await utils.removeFiles(req.files[0].destination);
-    return { error: "Missing argument. Please provide address files and signature." };
+    return {
+      error: "Missing argument. Please provide address files and signature.",
+    };
   }
-  if (req.body.address.length != 42 || req.body.address.substring(0, 2) != "0x") {
+  if (
+    req.body.address.length != 42 ||
+    req.body.address.substring(0, 2) != "0x"
+  ) {
     console.log("Invalid address");
     await utils.removeFiles(req.files[0].destination);
-    return { error: "Invalid address. Address must be 42 characters long and start with 0x." };
+    return {
+      error:
+        "Invalid address. Address must be 42 characters long and start with 0x.",
+    };
   }
   const address = req.body.address.toLowerCase();
   const secretMessage = msgCache.take(address);
@@ -60,12 +69,17 @@ const runInitialInputValidation = async (req) => {
     await utils.removeFiles(req.files[0].destination);
     return { error: `No secret message for ${address} at time ${Date.now()}` };
   }
+  //@ts-expect-error secretMessage type unknown due to node-cache lib
   const msgHash = web3.utils.sha3(secretMessage);
-  const signer = (await ethers.utils.recoverAddress(msgHash, req.body.signature)).toLowerCase();
+  const signer = ethers.utils
+    .recoverAddress(msgHash!, req.body.signature)
+    .toLowerCase();
   if (signer != address) {
     console.log(`signer != address\nsigner: ${signer}\naddress: ${address}`);
     await utils.removeFiles(req.files[0].destination);
-    return { error: `No secret message for ${address} in cache. Sign secret message before uploading.` };
+    return {
+      error: `No secret message for ${address} in cache. Sign secret message before uploading.`,
+    };
   }
 
   // Check that user has Holo
@@ -75,27 +89,34 @@ const runInitialInputValidation = async (req) => {
     if (!holoAddresses.includes(address)) {
       console.log("User is not authorized to upload. They do not have a Holo.");
       await utils.removeFiles(req.files[0].destination);
-      return { error: "User is not authorized to upload. They do not have a Holo." };
+      return {
+        error: "User is not authorized to upload. They do not have a Holo.",
+      };
     }
   } catch (err) {
     console.log("User is not authorized to upload. They do not have a Holo.");
     console.log(err);
     await utils.removeFiles(req.files[0].destination);
-    return { error: "User is not authorized to upload. They do not have a Holo." };
+    return {
+      error: "User is not authorized to upload. They do not have a Holo.",
+    };
   }
 
   return { success: "Initial input validation succeeded." };
-};
+}
 
 // Move uploaded files into the folders that the user had them in.
 // E.g., if user uploaded /testdir/abc.txt, move the local file abc.txt to <tmpFolder>/testdir/abc.txt
-const moveFilesToCorrectFolders = async (req) => {
+export async function moveFilesToCorrectFolders(req: any) {
   const files = [];
   const timestampedFolder = req.files[0].destination;
   for (const file of req.files) {
     if (typeof req.body[file.originalname] != "string") {
       // Check if these files are in .git folder. If so, ignore and continue.
-      if (Array.isArray(req.body[file.originalname]) && req.body[file.originalname].length > 0) {
+      if (
+        Array.isArray(req.body[file.originalname]) &&
+        req.body[file.originalname].length > 0
+      ) {
         if (req.body[file.originalname][0].includes("/.git/")) {
           continue;
         }
@@ -132,14 +153,14 @@ const moveFilesToCorrectFolders = async (req) => {
     }
   }
   return files;
-};
+}
 
 /**
  * Add certain ignore rules to .bidsignore file in root of specified dir.
  * If no .bidsignore file exists in root of specified dir, one is created.
  * @param dir Must end with forward slash ('/').
  */
-const addBidsIgnoreRules = async (dir) => {
+async function addBidsIgnoreRules(dir: string): Promise<boolean> {
   const linesArr = [
     "*~",
     "tmp_dcm2bids",
@@ -158,29 +179,30 @@ const addBidsIgnoreRules = async (dir) => {
     console.log(err);
   }
   return false;
-};
-
-const generateCommonsFile = (file, chunkId) => {
+}
+// TODO implement Chunk interface
+async function generateCommonsFile(file: any, chunkId: any) {
   if (!file.path.startsWith("/")) {
     file.path = "/" + file.path;
   }
   return {
-    _id: mongodb.ObjectId(),
+    _id: new mongodb.ObjectId(),
     chunkId: chunkId,
     name: file.name,
     path: file.path,
     size: file.size,
     documentation: "",
   };
-};
+}
 
 /**
  * @param params Object containing every value to store in the dataset object,
  *        except "_id" and "published" which are populated by this function.
  */
-const generateDataset = (params) => {
+// TODO implement Dataset interface
+function generateDataset(params: any){
   return {
-    _id: mongodb.ObjectId(),
+    _id: new mongodb.ObjectId(),
     title: params.title,
     description: params.description, // TODO: Extract from dataset_description.json if it exists
     authors: params.authors || [], // TODO: Extract from dataset_description.json if it exists
@@ -204,14 +226,17 @@ const generateDataset = (params) => {
     chunkIds: params.chunkIds || [],
   };
 };
-
-const generateChunk = (params) => {
+// TODO implement Chunk interface
+function generateChunk(params: any){
   return {
-    _id: mongodb.ObjectId(),
+    _id: new mongodb.ObjectId(),
     datasetId: params.datasetId,
     path: params.path || "/",
     doi: params.doi || "",
-    storageIds: { cid: params.storageIds?.cid || "", estuaryId: params.storageIds?.estuaryId || null },
+    storageIds: {
+      cid: params.storageIds?.cid || "",
+      estuaryId: params.storageIds?.estuaryId || null,
+    },
     fileIds: params.fileIds || [],
     size: params.size,
   };
@@ -224,8 +249,14 @@ const generateChunk = (params) => {
  * @param files File objects containing metadata (e.g., name, path, chunkId)
  * @returns True if all db requests were acknowledged, false otherwise
  */
-const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
-  let acknowledged, dataset, chunk;
+export async function insertMetadata (
+  datasetMetadata: any,
+  chunkMetadata: any,
+  files: any[]
+): Promise<boolean>{
+  let acknowledged,
+    dataset: any,
+    chunk: any = undefined; //TODO: implement interface types
   // Max insert attempts. Try inserting multiple time in case of _id collision or other errors
   const maxAttempts = 3;
 
@@ -241,14 +272,16 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
     if (acknowledged) break;
   }
   if (!acknowledged) {
-    console.log(`${new Date().toISOString()} Request to insert dataset metadata was not acknowledged by database. Exiting.`);
+    console.log(
+      `${new Date().toISOString()} Request to insert dataset metadata was not acknowledged by database. Exiting.`
+    );
     return false;
   }
 
   // Chunk
   for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
     chunk = generateChunk({
-      datasetId: dataset._id,
+      datasetId: dataset!._id,
       storageIds: chunkMetadata.storageIds,
       size: chunkMetadata.size,
     });
@@ -256,49 +289,63 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
     if (acknowledged) break;
   }
   if (!acknowledged) {
-    console.log(`${new Date().toISOString()} Request to insert chunk metadata was not acknowledged by database. Exiting.`);
+    console.log(
+      `${new Date().toISOString()} Request to insert chunk metadata was not acknowledged by database. Exiting.`
+    );
     await dbWrapper.deleteDataset({ _id: dataset._id });
     return false;
   }
-  await dbWrapper.updateDataset({ _id: dataset._id }, { $set: { chunkIds: [chunk._id] } });
+  await dbWrapper.updateDataset(
+    { _id: dataset._id },
+    { $set: { chunkIds: [chunk._id] } }
+  );
 
   // commonsFiles
   const fileIds = [];
   for (const tmpFile of files) {
-    let commonsFile;
+    let commonsFile: any; //TODO: Implement interface types
     for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
-      commonsFile = generateCommonsFile(tmpFile, chunk._id);
+      commonsFile = await generateCommonsFile(tmpFile, chunk._id);
       acknowledged = await dbWrapper.insertCommonsFile(commonsFile);
       if (acknowledged) break;
     }
     if (!acknowledged) {
-      console.log(`${new Date().toISOString()} Request to insert commonsFile metadata was not acknowledged by database. Exiting.`);
+      console.log(
+        `${new Date().toISOString()} Request to insert commonsFile metadata was not acknowledged by database. Exiting.`
+      );
       await dbWrapper.deleteDataset({ _id: dataset._id });
       await dbWrapper.deleteChunk({ _id: chunk._id });
       await dbWrapper.deleteCommonsFiles({ _id: { $in: fileIds } });
       return false;
     }
-    fileIds.push(commonsFile._id);
+    fileIds.push(commonsFile!._id);
   }
   const queryFilter = { _id: chunk._id };
   const updateDocument = { $set: { fileIds: fileIds } };
-  const updateSuccess = await dbWrapper.updateChunk(queryFilter, updateDocument);
+  const updateSuccess = await dbWrapper.updateChunk(
+    queryFilter,
+    updateDocument
+  );
   if (!updateSuccess) {
     await dbWrapper.deleteDataset({ _id: dataset._id });
     await dbWrapper.deleteChunk({ _id: chunk._id });
     await dbWrapper.deleteCommonsFiles({ _id: { $in: fileIds } });
-    console.log(`${new Date().toISOString()} Failed to set chunk.files in database. Exiting.`);
+    console.log(
+      `${new Date().toISOString()} Failed to set chunk.files in database. Exiting.`
+    );
   }
   return updateSuccess;
 };
 
-const uploadFiles = async (req, res) => {
+export async function uploadFiles(req: any, res: any): Promise<any> {
   // TODO: chunking
 
   console.log(`${new Date().toISOString()} uploadFile: Entered`);
   const initValidation = await runInitialInputValidation(req);
   if (initValidation.error) {
-    return res.status(400).json({ error: `Failed initial input validation. Problem: ${initValidation.error}` });
+    return res.status(400).json({
+      error: `Failed initial input validation. Problem: ${initValidation.error}`,
+    });
   }
   // console.log(req.files);
 
@@ -307,7 +354,8 @@ const uploadFiles = async (req, res) => {
 
   const files = await moveFilesToCorrectFolders(req);
   if (files.length == 0) {
-    const message = "Files could not be organized into their proper directories.";
+    const message =
+      "Files could not be organized into their proper directories.";
     console.log(`${new Date().toISOString()} uploadFiles: ${message}`);
     await utils.removeFiles(req.files[0].destination);
     return res.status(400).json({ error: message });
@@ -316,7 +364,8 @@ const uploadFiles = async (req, res) => {
   const timestampedFolder = req.files[0].destination;
   const dirChildren = fs.readdirSync(timestampedFolder);
   if (dirChildren.length != 1) {
-    const message = "Files could not be organized into their proper directories.";
+    const message =
+      "Files could not be organized into their proper directories.";
     console.log(`${new Date().toISOString()} uploadFiles: ${message}`);
     await utils.removeFiles(req.files[0].destination);
     return res.status(400).json({ error: message });
@@ -339,24 +388,36 @@ const uploadFiles = async (req, res) => {
   });
 
   // Upload file
-  console.log(`${new Date().toISOString()} Uploading ${carFilename} to Estuary`);
+  console.log(
+    `${new Date().toISOString()} Uploading ${carFilename} to Estuary`
+  );
   const file = fs.createReadStream(carFilename);
   const uploadResp = await estuaryWrapper.uploadFile(file, 3);
   // const uploadResp = { cid: "0x124", estuaryId: "81" }; // THIS LINE IS FOR TESTING ONLY
   await utils.removeFiles(timestampedFolder);
   if (!uploadResp) {
-    console.log(`${new Date().toISOString()} Failed to upload ${carFilename} to Estuary`);
-    return res.status(400).json({ error: "An error occurred trying to upload to Estuary. Try again later." });
+    console.log(
+      `${new Date().toISOString()} Failed to upload ${carFilename} to Estuary`
+    );
+    return res.status(400).json({
+      error: "An error occurred trying to upload to Estuary. Try again later.",
+    });
   }
   const newUploadCid = uploadResp.cid;
   const newUploadEstuaryId = uploadResp.estuaryId;
 
   // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
-  const matchingChunkDocuments = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
+  const matchingChunkDocuments = await dbWrapper.getChunks({
+    "storageIds.cid": newUploadCid,
+  });
   if (matchingChunkDocuments.length > 0) {
-    console.log(`${new Date().toISOString()} User has already uploaded this file. Removing the duplicate file from Estuary and exiting.`);
-    await estuaryWrapper.deleteFile(newUploadEstuaryId);
-    return res.status(400).json({ error: "This dataset has already been uploaded." });
+    console.log(
+      `${new Date().toISOString()} User has already uploaded this file. Removing the duplicate file from Estuary and exiting.`
+    );
+    await estuaryWrapper.deleteFile(newUploadEstuaryId, 3);
+    return res
+      .status(400)
+      .json({ error: "This dataset has already been uploaded." });
   }
 
   const sumFileSizes = files.map((file) => file.size).reduce((a, b) => a + b);
@@ -378,20 +439,30 @@ const uploadFiles = async (req, res) => {
     storageIds: { cid: newUploadCid, estuaryId: parseInt(newUploadEstuaryId) },
     size: sumFileSizes,
   };
-  const insertSuccess = await insertMetadata(datasetMetadata, chunkMetadata, files);
+  const insertSuccess = await insertMetadata(
+    datasetMetadata,
+    chunkMetadata,
+    files
+  );
   if (!insertSuccess) {
-    console.log(`${new Date().toISOString()} Failed to insert metadata into database. Removing file from Estuary and exiting.`);
-    await estuaryWrapper.deleteFile(newUploadEstuaryId);
-    return res.status(400).json({ error: "Failed to insert metadata into database." });
+    console.log(
+      `${new Date().toISOString()} Failed to insert metadata into database. Removing file from Estuary and exiting.`
+    );
+    await estuaryWrapper.deleteFile(newUploadEstuaryId, 3);
+    return res
+      .status(400)
+      .json({ error: "Failed to insert metadata into database." });
   } else {
-    console.log(`${new Date().toISOString()} Successfully uploaded files for ${address}`);
+    console.log(
+      `${new Date().toISOString()} Successfully uploaded files for ${address}`
+    );
   }
   return res.status(201).json({
     message: `Successfully uploaded dataset for address ${address}.`,
     cid: newUploadCid,
   });
-};
+}
 
-module.exports = {
-  uploadFiles: uploadFiles,
+export default {
+  uploadFiles,
 };
