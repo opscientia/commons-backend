@@ -13,6 +13,7 @@ import { msgCache } from "../init";
 import dbWrapper from "../utils/dbWrapper";
 import estuaryWrapper from "../utils/estuaryWrapper";
 import utils from "../utils/utils";
+import { Chunk, CommonsFile, Dataset } from "../@types/metadata";
 
 export async function runBidsValidation(pathToDirectory: string): Promise<any> {
   return new Promise<any>((resolve) => {
@@ -180,8 +181,7 @@ async function addBidsIgnoreRules(dir: string): Promise<boolean> {
   }
   return false;
 }
-// TODO implement Chunk interface
-async function generateCommonsFile(file: any, chunkId: any) {
+async function generateCommonsFile(file: any, chunkId: any): Promise<CommonsFile> {
   if (!file.path.startsWith("/")) {
     file.path = "/" + file.path;
   }
@@ -199,8 +199,7 @@ async function generateCommonsFile(file: any, chunkId: any) {
  * @param params Object containing every value to store in the dataset object,
  *        except "_id" and "published" which are populated by this function.
  */
-// TODO implement Dataset interface
-function generateDataset(params: any){
+async function generateDataset(params: any): Promise<Dataset>{
   return {
     _id: new mongodb.ObjectId(),
     title: params.title,
@@ -226,8 +225,7 @@ function generateDataset(params: any){
     chunkIds: params.chunkIds || [],
   };
 };
-// TODO implement Chunk interface
-function generateChunk(params: any){
+async function generateChunk(params: any): Promise<Chunk>{
   return {
     _id: new mongodb.ObjectId(),
     datasetId: params.datasetId,
@@ -250,8 +248,8 @@ function generateChunk(params: any){
  * @returns True if all db requests were acknowledged, false otherwise
  */
 export async function insertMetadata (
-  datasetMetadata: any,
-  chunkMetadata: any,
+  datasetMetadata: Dataset,
+  chunkMetadata: Chunk,
   files: any[]
 ): Promise<boolean>{
   let acknowledged,

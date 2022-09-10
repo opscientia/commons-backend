@@ -1,4 +1,4 @@
-export interface Dataset {
+export interface  Dataset {
     _id: any; // MongoDB ObjectId object
     title: string;
     description: string;
@@ -44,11 +44,11 @@ export interface CommonsFile {
     size: number;
     documentation: string;
 }
-
+// ToDo: Make ORCID, Email, and Blockchain address as required fields when implemented
 export interface Author {
     _id: any // MongoDB ObjectId object
     name: string
-    orcid: string
-    email: string
-    blockchainAddress: string
+    orcid?: string
+    email?: string
+    blockchainAddress?: string
 }
