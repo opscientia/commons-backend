@@ -1,12 +1,10 @@
 import { Author, Chunk, CommonsFile, Dataset } from "../@types/metadata";
-
-const { mongoClient } = require("../init");
-const {
+import { mongoClient } from "../init";
+import {
   validateDataset,
   validateChunk,
   validateCommonsFile,
-} = require("./metadataValidator");
-
+} from "./metadataValidator";
 const mongoDbName = "admin";
 const dsCollectionName = "datasets";
 const chunkCollectionName = "chunks";
@@ -87,11 +85,13 @@ export async function insertItem(
  * @returns True if the insertion request was acknowledged, false otherwise
  */
 export async function insertDataset(dataset: Dataset): Promise<boolean> {
-  const isValid = await validateDataset(dataset);
-  if (!isValid) {
-    return false;
+  if (dataset) {
+    const isValid = await validateDataset(dataset);
+    if (!isValid) {
+      return false;
+    }
+    return await insertItem(dataset, dsCollectionName);
   }
-  return await insertItem(dataset, dsCollectionName);
 }
 
 /**
@@ -99,23 +99,29 @@ export async function insertDataset(dataset: Dataset): Promise<boolean> {
  * @returns True if the insertion request was acknowledged, false otherwise
  */
 async function insertChunk(chunk: Chunk): Promise<boolean> {
-  const isValid = await validateChunk(chunk);
-  if (!isValid) {
-    return false;
+  if (chunk) {
+    const isValid = await validateChunk(chunk);
+    if (!isValid) {
+      return false;
+    }
+    return await insertItem(chunk, chunkCollectionName);
   }
-  return await insertItem(chunk, chunkCollectionName);
 }
 
 /**
  * @param commonsFile Must accord with the commonsFile metadata schema
  * @returns True if the insertion request was acknowledged, false otherwise
  */
-export async function insertCommonsFile(commonsFile: CommonsFile): Promise<boolean> {
+export async function insertCommonsFile(
+  commonsFile: CommonsFile
+): Promise<boolean> {
+if ( commonsFile ) {
   const isValid = await validateCommonsFile(commonsFile);
   if (!isValid) {
     return false;
   }
   return await insertItem(commonsFile, fileCollectionName);
+}
 }
 
 /**

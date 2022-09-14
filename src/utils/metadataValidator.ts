@@ -9,7 +9,7 @@ interface BidsValidation {
 }
 
 // The values here include return values from the BIDS Validator
-const bidsValidationSchema = yup.object().shape({
+const bidsValidationSchema = yup?.object().shape({
   validated: yup.boolean().required(),
   version: yup.string(),
   deidentified: yup.boolean(),
