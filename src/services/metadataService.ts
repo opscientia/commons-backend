@@ -281,7 +281,7 @@ export async function getFileMetadata(req: any, res: any){
     let fileIds: string[] = [];
     for (const chunk of chunks) {
       for (const fileId of chunk.fileIds) {
-        // @ts-expect-error
+        //  @ts-ignore
         fileIdToEstuaryId[fileId] = chunk.storageIds.estuaryId;
         fileIds.push(fileId);
       }
@@ -295,7 +295,7 @@ export async function getFileMetadata(req: any, res: any){
     const filesWithEstIds = files.map((file: any) => ({
       ...file,
       // TODO: There must be a better way to return the estuaryIds of the datasets
-      // @ts-expect-error 
+      // @ts-ignore
       estuaryId: fileIdToEstuaryId[file._id],
     }));
     return res.status(200).json(filesWithEstIds);

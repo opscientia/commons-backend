@@ -24,4 +24,4 @@ export default function UploadToEstuary() {
   
   
   router.post("/", upload.array("data"), uploadToEstuaryService.uploadFiles);
-}
+};

@@ -14,6 +14,6 @@ export default function Metadata (){
     router.get("/files/", metadataService.getFileMetadata);
     router.delete("/files/", metadataService.deleteFileMetadata);
     router.get("/authors/", metadataService.getAuthorsByDatasetId);
-}
+};
 
 

@@ -1,39 +1,40 @@
 export interface  Dataset {
-    _id: any; // MongoDB ObjectId object
-    title: string;
-    description: string;
-    authors: any[]; // MongoDB ObjectId object // pointers to author objects
-    uploader: string; // blockchain address
-    license: string;
-    doi: string;
-    keywords: string[];
-    published: boolean;
+    _id?: any; // MongoDB ObjectId object
+    title?: string;
+    description?: string;
+    authors?: any[]; // MongoDB ObjectId object // pointers to author objects
+    uploader?: string; // blockchain address
+    license?: string;
+    doi?: string;
+    keywords?: string[];
+    published?: boolean;
     size: number;
     standard: {
         bids: {
-            validated: boolean;
-            version: string;
-            deidentified: boolean;
+            validated?: boolean;
+            version?: string;
+            deidentified?: boolean;
             modalities: string[];
             tasks: string[];
             warnings: string[];
             errors: string[];
+            
         };
-        STANDARD2: {
+        STANDARD2?: {
         };
     }
-    miscellaneous: any;
-    chunkIds: any[]; // array of MongoDB ObjectId objects
+    miscellaneous?: any;
+    chunkIds?: any[]; // array of MongoDB ObjectId objects
 }
 
 export interface Chunk {
-    _id: any; // MongoDB ObjectId object
-    datasetId: any; // id of parent dataset // MongoDB ObjectId object
-    path: string;
-    doi: string;
-    storageIds: {cid: string, estuaryId: string};
-    fileIds: any[]; // array of commonsFileIds // array of MongoDB ObjectId objects
-    size: number;
+    _id?: any; // MongoDB ObjectId object
+    datasetId?: any; // id of parent dataset // MongoDB ObjectId object
+    path?: string;
+    doi?: string;
+    storageIds?: {cid: string, estuaryId: any};
+    fileIds?: any[]; // array of commonsFileIds // array of MongoDB ObjectId objects
+    size?: number;
 }
 
 export interface CommonsFile {

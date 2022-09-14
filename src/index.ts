@@ -1,11 +1,10 @@
-import express from "express";
+import * as express from "express";
 import cors from 'cors';
 import Metadata from "./routes/metadata";
 import UploadToEstuary from "./routes/uploadToEstuary";
 import InitializeUpload from "./routes/initializeUpload";
 
-
-const app = express();
+const app = express.default();
 
 const corsOptions = {
   // origin: ["https://commons.opsci.io"],
