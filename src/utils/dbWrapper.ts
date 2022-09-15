@@ -1,5 +1,3 @@
-import { Author, Chunk, CommonsFile, Dataset } from "../@types/metadata";
-
 const { mongoClient } = require("../init");
 const {
   validateDataset,
@@ -86,7 +84,7 @@ export async function insertItem(
  * @param dataset Must accord with the dataset metadata schema
  * @returns True if the insertion request was acknowledged, false otherwise
  */
-export async function insertDataset(dataset: Dataset): Promise<boolean> {
+export async function insertDataset(dataset: any): Promise<boolean> {
   const isValid = await validateDataset(dataset);
   if (!isValid) {
     return false;
@@ -98,7 +96,7 @@ export async function insertDataset(dataset: Dataset): Promise<boolean> {
  * @param chunk Must accord with the chunk metadata schema
  * @returns True if the insertion request was acknowledged, false otherwise
  */
-async function insertChunk(chunk: Chunk): Promise<boolean> {
+async function insertChunk(chunk: any): Promise<boolean> {
   const isValid = await validateChunk(chunk);
   if (!isValid) {
     return false;
@@ -110,7 +108,7 @@ async function insertChunk(chunk: Chunk): Promise<boolean> {
  * @param commonsFile Must accord with the commonsFile metadata schema
  * @returns True if the insertion request was acknowledged, false otherwise
  */
-export async function insertCommonsFile(commonsFile: CommonsFile): Promise<boolean> {
+export async function insertCommonsFile(commonsFile: any): Promise<boolean> {
   const isValid = await validateCommonsFile(commonsFile);
   if (!isValid) {
     return false;
@@ -122,7 +120,7 @@ export async function insertCommonsFile(commonsFile: CommonsFile): Promise<boole
  * @param author An author object. Must include a `name` attribute
  * @returns True if the insertion request was acknowledged, false otherwise
  */
-export async function insertAuthor(author: Author): Promise<boolean> {
+export async function insertAuthor(author: any): Promise<boolean> {
   if (!author.name) return false;
   return await insertItem(author, authorCollectionName);
 }
@@ -320,15 +318,20 @@ export default {
   insertChunk,
   insertCommonsFile,
   insertDataset,
+  insertItem,
+  updateItem,
   updateDataset,
   updateCommonsFile,
   updateChunk,
   updateAuthor,
+  deleteAuthor,
   deleteAuthors,
-  deleteChunks,
   deleteChunk,
+  deleteChunks,
+  deleteCommonsFile,
   deleteCommonsFiles,
   deleteDataset,
   deleteDatasets0,
   deleteManyItems,
+  deleteOneItem
 };

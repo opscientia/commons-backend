@@ -1,6 +1,5 @@
 import yup from 'yup';
 import mongodb from 'mongodb';
-import { Chunk, CommonsFile, Dataset } from '../@types/metadata';
 interface BidsValidation {
   validated: boolean;
   version: string;
@@ -61,17 +60,16 @@ const commonsFileSchema = yup.object().shape({
   documentation: yup.string(),
 });
 
-export async function validateDataset(dataset: Dataset):Promise<boolean> {
+export async function validateDataset(dataset: any):Promise<boolean> {
   return await datasetSchema.isValid(dataset);
 };
 
-export async function validateChunk(chunk: Chunk): Promise<boolean> {
+export async function validateChunk(chunk: any): Promise<boolean> {
   return await chunkSchema.isValid(chunk);
 };
 
-export async function validateCommonsFile(commonsFile: CommonsFile): Promise<boolean>{
+export async function validateCommonsFile(commonsFile: any): Promise<boolean>{
   return await commonsFileSchema.isValid(commonsFile);
 };
 
-//ToDo: Add Author Metadata validator once email, orcid and blockchainAddress fields are implemented
 export default { validateChunk, validateCommonsFile, validateDataset};
