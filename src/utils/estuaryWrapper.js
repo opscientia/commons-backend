@@ -1,41 +1,34 @@
-import axios from "axios";
-import fs from "fs";
-import utils from "./utils";
-import FormData from "form-data";
-import { packToFs } from "ipfs-car/pack/fs";
-import { FsBlockStore } from "ipfs-car/blockstore/fs";
+const axios = require("axios");
+const fs = require("fs");
+const FormData = require("form-data");
+const { packToFs } = require("ipfs-car/pack/fs");
+const { FsBlockStore } = require("ipfs-car/blockstore/fs");
+const utils = require("./utils");
 
-const estuaryEndpoints = [
-  "https://shuttle-4.estuary.tech/content/add",
-  "https://api.estuary.tech/content/add",
-];
+const estuaryEndpoints = ["https://shuttle-4.estuary.tech/content/add", "https://api.estuary.tech/content/add"];
 
-async function getPinsList() {
+module.exports.getPinsList = async () => {
   try {
     const resp = await axios.get("https://api.estuary.tech/pinning/pins", {
       headers: {
         Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
       },
     });
-    const pinMetadata = resp.data.results.map(
-      (item: { pin: { name: any; cid: any }; estuaryId: any }) => ({
-        filename: item.pin.name,
-        cid: item.pin.cid,
-        estuaryId: item.estuaryId,
-      })
-    );
+    const pinMetadata = resp.data.results.map((item) => ({
+      filename: item.pin.name,
+      cid: item.pin.cid,
+      estuaryId: item.estuaryId,
+    }));
     return pinMetadata;
-  } catch (err: any) {
-    if (err) {
-      console.error(
-        `estuaryWrapper.getPinsList: Error status: ${err.response?.status}. Error code: ${err.code}. Error message: ${err.message}`
-      );
-    }
+  } catch (err) {
+    console.log(
+      `estuaryWrapper.getPinsList: Error status: ${err.response?.status}. Error code: ${err.code}. Error message: ${err.message}`
+    );
   }
   return undefined;
-}
+};
 
-async function uploadFile(file: any, maxAttempts: number) {
+module.exports.uploadFile = async (file, maxAttempts = 3) => {
   const formData = new FormData();
   formData.append("data", file);
 
@@ -59,44 +52,34 @@ async function uploadFile(file: any, maxAttempts: number) {
         maxBodyLength: Infinity,
       });
       return resp.data;
-    } catch (err: any) {
-      if (err) {
-        numAttempts++;
-        console.error(
-          `estuaryWrapper.uploadFile: Error status: ${err.response?.status}. Error code: ${err.code}. Error message: ${err.message}`
-        );
-      }
+    } catch (err) {
+      numAttempts++;
+      console.log(
+        `estuaryWrapper.uploadFile: Error status: ${err.response?.status}. Error code: ${err.code}. Error message: ${err.message}`
+      );
     }
   }
-}
+};
 
-async function deleteFile(requestid: any, maxAttempts: number): Promise<boolean> {
+module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
   let numAttempts = 0;
   while (numAttempts < maxAttempts) {
     try {
-      const resp = await axios.delete(
-        `https://api.estuary.tech/pinning/pins/${requestid}`,
-        {
-          headers: {
-            Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
-          },
-        }
-      );
-      console.log(
-        `estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`
-      );
+      const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${requestid}`, {
+        headers: {
+          Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+        },
+      });
+      console.log(`estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`);
       return true;
-    } catch (err: any) {
-      if (err) {
-        numAttempts++;
-        console.error(
-          `estuaryWrapper.deleteFile: Error status: ${err.response?.status}. Error code: ${err.code}. Error message: ${err.message}`
-        );
-      }
+    } catch (err) {
+      numAttempts++;
+      console.log(
+        `estuaryWrapper.deleteFile: Error status: ${err.response?.status}. Error code: ${err.code}. Error message: ${err.message}`
+      );
     }
   }
-  return false;
-}
+};
 
 /**
  * Pack directory at pathToDir into a CAR file and upload that CAR to Estuary.
@@ -105,7 +88,7 @@ async function deleteFile(requestid: any, maxAttempts: number): Promise<boolean>
  *                  This local file will be deleted after upload.
  * @returns Response of upload request to Estuary if request succeeds, undefined otherwise.
  */
-async function uploadDirAsCar(pathToDir: string, pathToCar: string) {
+module.exports.uploadDirAsCar = async (pathToDir, pathToCar) => {
   if (!pathToCar) pathToCar = `${pathToDir + Date.now()}.car`;
   try {
     const { root, filename: carFilename } = await packToFs({
@@ -121,9 +104,7 @@ async function uploadDirAsCar(pathToDir: string, pathToCar: string) {
     await utils.removeFiles(pathToCar);
     if (!uploadResp) console.log(`Failed to upload ${carFilename} to Estuary`);
     return uploadResp;
-  } catch (err: any) {
-    console.error(err);
+  } catch (err) {
+    console.log(err);
   }
-}
-
-export default { uploadDirAsCar, deleteFile, uploadFile, getPinsList };
+};
