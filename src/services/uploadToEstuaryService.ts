@@ -6,7 +6,7 @@ import FormData from "form-data";
 import { ethers } from "ethers";
 import web3 from "web3";
 import mongodb from "mongodb";
-import { validate } from "bids-Validator";
+import { validate } from "bids-validator";
 import { packToFs } from "ipfs-car/pack/fs";
 import { FsBlockStore } from "ipfs-car/blockstore/fs";
 import { msgCache } from "../init";

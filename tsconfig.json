@@ -47,5 +47,5 @@
     "skipLibCheck": true,
   },
   "exclude": ["node_modules", "./build/**/*", "./dist/**/*"],
-  "include": ["**/*.ts", "./src/", "./test/", "**/*.d.ts", "**/*.js"]
+  "include": ["**/*.ts", "./src/", "./test/", "**/*.d.ts", "**/*.js", "src/@types/bids-validator.d.ts"]
 }
