@@ -69,20 +69,20 @@ const runInitialInputValidation = async (req) => {
   }
 
   // Check that user has Holo
-  try {
-    const resp = await axios.get("https://sciverse.id/api/getAllUserAddresses");
-    // const holoAddresses = resp.data;
-    // if (!holoAddresses.includes(address)) {
-    //   console.log("User is not authorized to upload. They do not have a Holo.");
-    //   await utils.removeFiles(req.files[0].destination);
-    //   return { error: "User is not authorized to upload. They do not have a Holo." };
-    // }
-  } catch (err) {
-    console.log("User is not authorized to upload. They do not have a Holo.");
-    console.log(err);
-    await utils.removeFiles(req.files[0].destination);
-    return { error: "User is not authorized to upload. They do not have a Holo." };
-  }
+  // try {
+  //   const resp = await axios.get("https://sciverse.id/api/getAllUserAddresses");
+  //   // const holoAddresses = resp.data;
+  //   // if (!holoAddresses.includes(address)) {
+  //   //   console.log("User is not authorized to upload. They do not have a Holo.");
+  //   //   await utils.removeFiles(req.files[0].destination);
+  //   //   return { error: "User is not authorized to upload. They do not have a Holo." };
+  //   // }
+  // } catch (err) {
+  //   console.log("User is not authorized to upload. They do not have a Holo.");
+  //   console.log(err);
+  //   await utils.removeFiles(req.files[0].destination);
+  //   return { error: "User is not authorized to upload. They do not have a Holo." };
+  // }
 
   return { success: "Initial input validation succeeded." };
 };
