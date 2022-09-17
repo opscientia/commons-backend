@@ -5,3 +5,5 @@ notes.txt
 estuaryUploads/
 test.sqlite3
 ca-certificate.crt
+dist
+build
