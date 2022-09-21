@@ -1,4 +1,3 @@
-const express = require("express");
 const { msgCache } = require("../init");
 
 /**

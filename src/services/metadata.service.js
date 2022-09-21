@@ -1,17 +1,8 @@
-const express = require("express");
-const axios = require("axios");
-const fse = require("fs-extra");
 const mongodb = require("mongodb");
-const web3 = require("web3");
-const { ethers } = require("ethers");
-const { packToFs } = require("ipfs-car/pack/fs");
-const { FsBlockStore } = require("ipfs-car/blockstore/fs");
-const { unpackToFs } = require("ipfs-car/unpack/fs");
 const sanitizeHtml = require("sanitize-html");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 const utils = require("../utils/utils");
-const { fetchJson } = require("ethers/lib/utils");
 
 /**
  * Get dataset metadata for every dataset belonging to the specified address.
