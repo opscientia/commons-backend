@@ -34,7 +34,7 @@ const onAuthRedirect = async (req, res) => {
       console.log(" Hiii user, You've reached callback redirect");
     });
     const message = `Passport Authentication Redirect Triggered`;
-    return res.status(200).json({ message: message });
+    return res.status(200).json(req.user);
   } catch (error) {
     console.error(error);
   }

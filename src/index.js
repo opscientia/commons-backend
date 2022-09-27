@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const passportSetup = require("./utils/passport-setup");
-
+const cookiesSession = require("cookie-session");
 const metadata = require("./routes/metadata");
 const uploadToEstuary = require("./routes/uploadToEstuary");
 const initializeUpload = require("./routes/initializeUpload");
@@ -19,6 +19,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors(corsOptions));
 
+app.use(cookiesSession(
+  {
+    maxAge: 24 * 60 * 60 * 1000,
+    keys: [process.env.COOKIE_SECRET]
+  }
+));
+app.use(passport.initialize())
+app.use(passport.session())
 
 app.use("/metadata", metadata);
 app.use("/uploadToEstuary", uploadToEstuary);

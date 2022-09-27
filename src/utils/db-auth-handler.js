@@ -25,15 +25,15 @@ const createUser = async (user) => {
  * @param collectionName The name of the MongoDB collection to retrieve items from
  */
 const getUser = async (query) => {
-  let users;
+  let user;
   try {
     const db = mongoClient.db(mongoDbName);
     const collection = db.collection(UserCollectionName);
-    users = await collection.find(query).toArray();
+    user = await collection.find(query).toString();
   } catch (err) {
     console.log(err);
   }
-  return users;
+  return user;
 };
 
 module.exports = {

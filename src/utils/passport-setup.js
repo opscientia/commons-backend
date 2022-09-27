@@ -1,7 +1,22 @@
 const passport = require("passport");
 const OrcidStrategy = require("passport-orcid").Strategy;
 const orcidKeys = require("./keys");
-const { createUser, getUser } = require("./db-auth-handler");
+const dbAuthHandler = require("./db-auth-handler");
+const mongodb = require("mongodb");
+
+passport.serializeUser(function (user, done) {
+    done(null, user.id)
+  });
+
+passport.deserializeUser(function (id, done) {
+    const query = { _id: mongodb.ObjectId(req.query.userId)};
+    await dbAuthHandler.getUser(query).then((user) => {
+        done(null, user.id)
+    }
+    );
+  })
+
+
 passport.use(
   new OrcidStrategy(
     {
@@ -16,18 +31,18 @@ passport.use(
       // so populate the profile object from the params instead
       profile = { orcid: params.orcid, name: params.name };
 
-      getUser({ orcid: profile.orcid }).then((currentUser) => {
+      await dbAuthHandler.getUser({ orcid: profile.orcid }).then((currentUser) => {
         if (currentUser) {
           // User already exists, log their info
           console.log("User is:" + currentUser);
+            done(null, currentUser);
         } else {
-          createUser(profile).then((newUser) => {
+          await dbAuthHandler.createUser(profile).then((newUser) => {
             console.log("New User Created:" + newUser);
+            done(null, newUser);
           });
         }
       });
-
-      // return done(null, profile);
     }
   )
 );
