@@ -1,11 +1,9 @@
 const passport = require("passport");
 
-//auth login screen
-router.get("/login");
-
+// show auth login screen in frontend, if unnecessary remove this route
 const onLogin = async (req, res) => {
-  // handle with passport
-  const message = ` User Login Sucessfull`;
+  // render login screen
+  const message = `Display Login Screen`;
   return res.status(200).json({ message: message });
 };
 

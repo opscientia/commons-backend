@@ -1,6 +1,6 @@
 const router = require("express").Router();
 const orcidAuthService = require("../services/orcidAuth.service");
-//auth login screen
+// show auth login screen in frontend, if unnecessary remove this route
 router.get("/login", orcidAuthService.onLogin);
 
 // auth logout
