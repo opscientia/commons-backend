@@ -9,7 +9,7 @@ passport.serializeUser(function (user, done) {
 
 passport.deserializeUser(function (id, done) {
     const query = { _id: mongodb.ObjectId(req.query.userId)};
-    await dbAuthHandler.getUser(query).then((user) => {
+    dbAuthHandler.getUser(query).then((user) => {
         done(null, user.id)
     }
     );
@@ -30,13 +30,13 @@ passport.use(
       // so populate the profile object from the params instead
       profile = { orcid: params.orcid, name: params.name };
 
-      await dbAuthHandler.getUser({ orcid: profile.orcid }).then((currentUser) => {
+      dbAuthHandler.getUser({ orcid: profile.orcid }).then((currentUser) => {
         if (currentUser) {
           // User already exists, log their info
           console.log("User is:" + currentUser);
             done(null, currentUser);
         } else {
-          await dbAuthHandler.createUser(profile).then((newUser) => {
+          dbAuthHandler.createUser(profile).then((newUser) => {
             console.log("New User Created:" + newUser);
             done(null, newUser);
           });

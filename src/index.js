@@ -8,6 +8,7 @@ const initializeUpload = require("./routes/initializeUpload");
 const orcidOauth = require("./routes/orcid-oauth");
 const profileRoutes = require('./routes/userProfile');
 const req = require("express/lib/request");
+const passport = require("passport");
 
 const app = express();
 
