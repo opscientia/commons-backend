@@ -1,6 +1,5 @@
 const passport = require("passport");
 const OrcidStrategy = require("passport-orcid").Strategy;
-const orcidKeys = require("./keys");
 const dbAuthHandler = require("./db-auth-handler");
 const mongodb = require("mongodb");
 

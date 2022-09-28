@@ -4,12 +4,12 @@ const passport = require("passport");
 const onLogin = async (req, res) => {
   // render login screen
   const message = `Display Login Screen`;
-  return res.status(200).json({ message: message });
+  return res.status(200).json({ user: req.user, message: message });
 };
 
 const onLogout = async (req, res) => {
-  //handle with passport
-  res.send("logging out");
+  req.logout();
+  return res.redirect('/');
 };
 
 //auth with orcid
@@ -34,7 +34,8 @@ const onAuthRedirect = async (req, res) => {
       console.log(" Hiii user, You've reached callback redirect");
     });
     const message = `Passport Authentication Redirect Triggered`;
-    return res.status(200).json(req.user);
+    //return res.status(200).json(req.user);
+    return res.redirect('/profile');
   } catch (error) {
     console.error(error);
   }
