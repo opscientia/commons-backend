@@ -11,6 +11,7 @@ const bidsValidationSchema = yup.object().shape({
   warnings: yup.array().of(yup.string()),
   errors: yup.array().of(yup.string()),
 });
+
 const datasetSchema = yup.object().shape({
   title: yup.string(),
   description: yup.string(),

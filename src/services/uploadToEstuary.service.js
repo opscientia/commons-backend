@@ -1,8 +1,5 @@
-const express = require("express");
-const axios = require("axios");
 const fs = require("fs");
 const fse = require("fs-extra");
-const FormData = require("form-data");
 const web3 = require("web3");
 const { ethers } = require("ethers");
 const mongodb = require("mongodb");
@@ -46,12 +43,20 @@ const runInitialInputValidation = async (req) => {
   if (!req.body.address || !req.files || !req.body.signature) {
     console.log("Missing argument");
     await utils.removeFiles(req.files[0].destination);
-    return { error: "Missing argument. Please provide address files and signature." };
+    return {
+      error: "Missing argument. Please provide address files and signature.",
+    };
   }
-  if (req.body.address.length != 42 || req.body.address.substring(0, 2) != "0x") {
+  if (
+    req.body.address.length != 42 ||
+    req.body.address.substring(0, 2) != "0x"
+  ) {
     console.log("Invalid address");
     await utils.removeFiles(req.files[0].destination);
-    return { error: "Invalid address. Address must be 42 characters long and start with 0x." };
+    return {
+      error:
+        "Invalid address. Address must be 42 characters long and start with 0x.",
+    };
   }
   const address = req.body.address.toLowerCase();
   const secretMessage = msgCache.take(address);
@@ -61,11 +66,15 @@ const runInitialInputValidation = async (req) => {
     return { error: `No secret message for ${address} at time ${Date.now()}` };
   }
   const msgHash = web3.utils.sha3(secretMessage);
-  const signer = (await ethers.utils.recoverAddress(msgHash, req.body.signature)).toLowerCase();
+  const signer = (
+    await ethers.utils.recoverAddress(msgHash, req.body.signature)
+  ).toLowerCase();
   if (signer != address) {
     console.log(`signer != address\nsigner: ${signer}\naddress: ${address}`);
     await utils.removeFiles(req.files[0].destination);
-    return { error: `No secret message for ${address} in cache. Sign secret message before uploading.` };
+    return {
+      error: `No secret message for ${address} in cache. Sign secret message before uploading.`,
+    };
   }
 
   return { success: "Initial input validation succeeded." };
@@ -79,7 +88,10 @@ const moveFilesToCorrectFolders = async (req) => {
   for (const file of req.files) {
     if (typeof req.body[file.originalname] != "string") {
       // Check if these files are in .git folder. If so, ignore and continue.
-      if (Array.isArray(req.body[file.originalname]) && req.body[file.originalname].length > 0) {
+      if (
+        Array.isArray(req.body[file.originalname]) &&
+        req.body[file.originalname].length > 0
+      ) {
         if (req.body[file.originalname][0].includes("/.git/")) {
           continue;
         }
@@ -195,7 +207,10 @@ const generateChunk = (params) => {
     datasetId: params.datasetId,
     path: params.path || "/",
     doi: params.doi || "",
-    storageIds: { cid: params.storageIds?.cid || "", estuaryId: params.storageIds?.estuaryId || null },
+    storageIds: {
+      cid: params.storageIds?.cid || "",
+      estuaryId: params.storageIds?.estuaryId || null,
+    },
     fileIds: params.fileIds || [],
     size: params.size,
   };
@@ -225,7 +240,9 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
     if (acknowledged) break;
   }
   if (!acknowledged) {
-    console.log(`${new Date().toISOString()} Request to insert dataset metadata was not acknowledged by database. Exiting.`);
+    console.log(
+      `${new Date().toISOString()} Request to insert dataset metadata was not acknowledged by database. Exiting.`
+    );
     return false;
   }
 
@@ -240,11 +257,16 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
     if (acknowledged) break;
   }
   if (!acknowledged) {
-    console.log(`${new Date().toISOString()} Request to insert chunk metadata was not acknowledged by database. Exiting.`);
+    console.log(
+      `${new Date().toISOString()} Request to insert chunk metadata was not acknowledged by database. Exiting.`
+    );
     await dbWrapper.deleteDataset({ _id: dataset._id });
     return false;
   }
-  await dbWrapper.updateDataset({ _id: dataset._id }, { $set: { chunkIds: [chunk._id] } });
+  await dbWrapper.updateDataset(
+    { _id: dataset._id },
+    { $set: { chunkIds: [chunk._id] } }
+  );
 
   // commonsFiles
   const fileIds = [];
@@ -256,7 +278,9 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
       if (acknowledged) break;
     }
     if (!acknowledged) {
-      console.log(`${new Date().toISOString()} Request to insert commonsFile metadata was not acknowledged by database. Exiting.`);
+      console.log(
+        `${new Date().toISOString()} Request to insert commonsFile metadata was not acknowledged by database. Exiting.`
+      );
       await dbWrapper.deleteDataset({ _id: dataset._id });
       await dbWrapper.deleteChunk({ _id: chunk._id });
       await dbWrapper.deleteCommonsFiles({ _id: { $in: fileIds } });
@@ -266,12 +290,17 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
   }
   const queryFilter = { _id: chunk._id };
   const updateDocument = { $set: { fileIds: fileIds } };
-  const updateSuccess = await dbWrapper.updateChunk(queryFilter, updateDocument);
+  const updateSuccess = await dbWrapper.updateChunk(
+    queryFilter,
+    updateDocument
+  );
   if (!updateSuccess) {
     await dbWrapper.deleteDataset({ _id: dataset._id });
     await dbWrapper.deleteChunk({ _id: chunk._id });
     await dbWrapper.deleteCommonsFiles({ _id: { $in: fileIds } });
-    console.log(`${new Date().toISOString()} Failed to set chunk.files in database. Exiting.`);
+    console.log(
+      `${new Date().toISOString()} Failed to set chunk.files in database. Exiting.`
+    );
   }
   return updateSuccess;
 };
@@ -282,7 +311,11 @@ const uploadFiles = async (req, res) => {
   console.log(`${new Date().toISOString()} uploadFile: Entered`);
   const initValidation = await runInitialInputValidation(req);
   if (initValidation.error) {
-    return res.status(400).json({ error: `Failed initial input validation. Problem: ${initValidation.error}` });
+    return res
+      .status(400)
+      .json({
+        error: `Failed initial input validation. Problem: ${initValidation.error}`,
+      });
   }
   // console.log(req.files);
 
@@ -291,7 +324,8 @@ const uploadFiles = async (req, res) => {
 
   const files = await moveFilesToCorrectFolders(req);
   if (files.length == 0) {
-    const message = "Files could not be organized into their proper directories.";
+    const message =
+      "Files could not be organized into their proper directories.";
     console.log(`${new Date().toISOString()} uploadFiles: ${message}`);
     await utils.removeFiles(req.files[0].destination);
     return res.status(400).json({ error: message });
@@ -300,7 +334,8 @@ const uploadFiles = async (req, res) => {
   const timestampedFolder = req.files[0].destination;
   const dirChildren = fs.readdirSync(timestampedFolder);
   if (dirChildren.length != 1) {
-    const message = "Files could not be organized into their proper directories.";
+    const message =
+      "Files could not be organized into their proper directories.";
     console.log(`${new Date().toISOString()} uploadFiles: ${message}`);
     await utils.removeFiles(req.files[0].destination);
     return res.status(400).json({ error: message });
@@ -323,24 +358,39 @@ const uploadFiles = async (req, res) => {
   });
 
   // Upload file
-  console.log(`${new Date().toISOString()} Uploading ${carFilename} to Estuary`);
+  console.log(
+    `${new Date().toISOString()} Uploading ${carFilename} to Estuary`
+  );
   const file = fs.createReadStream(carFilename);
   const uploadResp = await estuaryWrapper.uploadFile(file, 3);
   // const uploadResp = { cid: "0x124", estuaryId: "81" }; // THIS LINE IS FOR TESTING ONLY
   await utils.removeFiles(timestampedFolder);
   if (!uploadResp) {
-    console.log(`${new Date().toISOString()} Failed to upload ${carFilename} to Estuary`);
-    return res.status(400).json({ error: "An error occurred trying to upload to Estuary. Try again later." });
+    console.log(
+      `${new Date().toISOString()} Failed to upload ${carFilename} to Estuary`
+    );
+    return res
+      .status(400)
+      .json({
+        error:
+          "An error occurred trying to upload to Estuary. Try again later.",
+      });
   }
   const newUploadCid = uploadResp.cid;
   const newUploadEstuaryId = uploadResp.estuaryId;
 
   // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
-  const matchingChunkDocuments = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
+  const matchingChunkDocuments = await dbWrapper.getChunks({
+    "storageIds.cid": newUploadCid,
+  });
   if (matchingChunkDocuments.length > 0) {
-    console.log(`${new Date().toISOString()} User has already uploaded this file. Removing the duplicate file from Estuary and exiting.`);
+    console.log(
+      `${new Date().toISOString()} User has already uploaded this file. Removing the duplicate file from Estuary and exiting.`
+    );
     await estuaryWrapper.deleteFile(newUploadEstuaryId);
-    return res.status(400).json({ error: "This dataset has already been uploaded." });
+    return res
+      .status(400)
+      .json({ error: "This dataset has already been uploaded." });
   }
 
   const sumFileSizes = files.map((file) => file.size).reduce((a, b) => a + b);
@@ -362,13 +412,23 @@ const uploadFiles = async (req, res) => {
     storageIds: { cid: newUploadCid, estuaryId: parseInt(newUploadEstuaryId) },
     size: sumFileSizes,
   };
-  const insertSuccess = await insertMetadata(datasetMetadata, chunkMetadata, files);
+  const insertSuccess = await insertMetadata(
+    datasetMetadata,
+    chunkMetadata,
+    files
+  );
   if (!insertSuccess) {
-    console.log(`${new Date().toISOString()} Failed to insert metadata into database. Removing file from Estuary and exiting.`);
+    console.log(
+      `${new Date().toISOString()} Failed to insert metadata into database. Removing file from Estuary and exiting.`
+    );
     await estuaryWrapper.deleteFile(newUploadEstuaryId);
-    return res.status(400).json({ error: "Failed to insert metadata into database." });
+    return res
+      .status(400)
+      .json({ error: "Failed to insert metadata into database." });
   } else {
-    console.log(`${new Date().toISOString()} Successfully uploaded files for ${address}`);
+    console.log(
+      `${new Date().toISOString()} Successfully uploaded files for ${address}`
+    );
   }
   return res.status(201).json({
     message: `Successfully uploaded dataset for address ${address}.`,
