@@ -276,6 +276,46 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
   return updateSuccess;
 };
 
+function parseFileChunk(file, options) {
+  const opts       = typeof options === 'undefined' ? {} : options;
+  const fileSize   = file.size;
+  const chunkSize  = typeof opts['chunk_size'] === 'undefined' ?  32 * 1024 * 1000000000 : parseInt(opts['chunk_size']); // 32gb in bytes 
+  const binary     = typeof opts['binary'] === 'undefined' ? false : opts['binary'] == true;
+  const offset     = 0;
+  const self       = this; // we need a reference to the current object
+  const readBlock  = null;
+  const chunkReadCallback = typeof opts['chunk_read_callback'] === 'function' ? opts['chunk_read_callback'] : function() {};
+  const chunkErrorCallback = typeof opts['error_callback'] === 'function' ? opts['error_callback'] : function() {};
+  const success = typeof opts['success'] === 'function' ? opts['success'] : function() {};
+
+  const onLoadHandler = function(evt) {
+      if (evt.target.error == null) {
+          offset += evt.target.result.length;
+          chunkReadCallback(evt.target.result);
+      } else {
+          chunkErrorCallback(evt.target.error);
+          return;
+      }
+      if (offset >= fileSize) {
+          success(file);
+          return;
+      }
+
+      readBlock(offset, chunkSize, file);
+  }
+
+  chunkBlock = function(_offset, length, _file) {
+      let blob = _file.slice(_offset, length + _offset);
+      r.onload = onLoadHandler;
+      if (binary) {
+          return r.readAsArrayBuffer(blob);
+      } else {
+        return r.readAsText(blob);
+      }
+  }
+
+}
+
 const uploadFiles = async (req, res) => {
   // TODO: chunking
 
