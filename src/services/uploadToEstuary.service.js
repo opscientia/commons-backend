@@ -301,18 +301,20 @@ function parseFileChunk(file, options) {
           return;
       }
 
-      readBlock(offset, chunkSize, file);
+      chunkBlock(offset, chunkSize, file);
   }
 
   chunkBlock = function(_offset, length, _file) {
       let blob = _file.slice(_offset, length + _offset);
       r.onload = onLoadHandler;
       if (binary) {
-          return r.readAsArrayBuffer(blob);
+         r.readAsArrayBuffer(blob);
       } else {
-        return r.readAsText(blob);
+        r.readAsText(blob);
       }
   }
+  chunkBlock(offset, chunkSize, file);
+
 
 }
 
