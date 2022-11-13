@@ -13,6 +13,7 @@ const { msgCache } = require("../init");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 const utils = require("../utils/utils");
+const { error } = require("console");
 
 const runBidsValidation = async (pathToDirectory) => {
   return new Promise((resolve) => {
@@ -31,7 +32,9 @@ const runBidsValidation = async (pathToDirectory) => {
       (issues, summary) => {
         if (issues.errors.length > 0) {
           console.log("BIDS validation failed");
-          resolve();
+          console.log(issues.errors);
+          resolve({ summary: summary, issues: issues });
+
         } else {
           console.log("BIDS validation succeeded");
           resolve({ summary: summary, issues: issues });
@@ -229,7 +232,6 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
     return false;
   }
 
-  // Chunk
   for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
     chunk = generateChunk({
       datasetId: dataset._id,
@@ -312,19 +314,21 @@ const uploadFiles = async (req, res) => {
 
   const validatorData = await runBidsValidation(userDefinedRootDirLocal);
   if (!validatorData) {
-    await utils.removeFiles(timestampedFolder);
-    return res.status(400).json({ error: "BIDS validation failed." });
+     await utils.removeFiles(timestampedFolder);
+    return res.status(400).json({ error: "BIDS validation failed." + validatorData.issues.key });
   }
-
+// TODO: Replace the rest of the code in this function with uploadDirAsCar from estuaryWrapper
   const { root, filename: carFilename } = await packToFs({
     input: userDefinedRootDirLocal,
     output: `${timestampedFolder}/${userDefinedRootDir}.car`,
     blockstore: new FsBlockStore(),
+    maxChunkSize: 262144
   });
 
   // Upload file
   console.log(`${new Date().toISOString()} Uploading ${carFilename} to Estuary`);
   const file = fs.createReadStream(carFilename);
+
   const uploadResp = await estuaryWrapper.uploadFile(file, 3);
   // const uploadResp = { cid: "0x124", estuaryId: "81" }; // THIS LINE IS FOR TESTING ONLY
   await utils.removeFiles(timestampedFolder);
