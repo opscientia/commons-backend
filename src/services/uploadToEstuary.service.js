@@ -14,6 +14,8 @@ const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 const utils = require("../utils/utils");
 const { error } = require("console");
+const { CarReader } = require( '@ipld/car/reader');
+const dagCbor = require ('@ipld/dag-cbor');
 
 const runBidsValidation = async (pathToDirectory) => {
   return new Promise((resolve) => {
@@ -322,12 +324,12 @@ const uploadFiles = async (req, res) => {
     input: userDefinedRootDirLocal,
     output: `${timestampedFolder}/${userDefinedRootDir}.car`,
     blockstore: new FsBlockStore(),
-    maxChunkSize: 262144
   });
 
   // Upload file
   console.log(`${new Date().toISOString()} Uploading ${carFilename} to Estuary`);
   const file = fs.createReadStream(carFilename);
+  const uploadRespsplit = await estuaryWrapper.splitCars(carFilename, 3);
 
   const uploadResp = await estuaryWrapper.uploadFile(file, 3);
   // const uploadResp = { cid: "0x124", estuaryId: "81" }; // THIS LINE IS FOR TESTING ONLY

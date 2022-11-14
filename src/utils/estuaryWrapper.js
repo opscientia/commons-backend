@@ -4,8 +4,14 @@ const FormData = require("form-data");
 const { packToFs } = require("ipfs-car/pack/fs");
 const { FsBlockStore } = require("ipfs-car/blockstore/fs");
 const utils = require("./utils");
+const { TreewalkCarSplitter } = require("carbites/treewalk");
+const { CarReader } = require("@ipld/car/reader");
+const dagCbor = require("@ipld/dag-cbor");
 
-const estuaryEndpoints = ["https://shuttle-4.estuary.tech/content/add", "https://api.estuary.tech/content/add"];
+const estuaryEndpoints = [
+  "https://shuttle-4.estuary.tech/content/add",
+  "https://api.estuary.tech/content/add",
+];
 
 module.exports.getPinsList = async () => {
   try {
@@ -65,12 +71,17 @@ module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
   let numAttempts = 0;
   while (numAttempts < maxAttempts) {
     try {
-      const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${requestid}`, {
-        headers: {
-          Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
-        },
-      });
-      console.log(`estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`);
+      const resp = await axios.delete(
+        `https://api.estuary.tech/pinning/pins/${requestid}`,
+        {
+          headers: {
+            Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+          },
+        }
+      );
+      console.log(
+        `estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`
+      );
       return true;
     } catch (err) {
       numAttempts++;
@@ -106,5 +117,36 @@ module.exports.uploadDirAsCar = async (pathToDir, pathToCar) => {
     return uploadResp;
   } catch (err) {
     console.log(err);
+  }
+};
+
+module.exports.splitCars = async (largeCar) => {
+  console.log("Chunking CAR File");
+  try {
+    const bigCar = await CarReader.fromIterable(fs.createReadStream(largeCar));
+    const [rootCid] = await bigCar.getRoots();
+    const MaxCarSize1MB = 100000000;
+    let cars = [];
+    //const targetSize =  64 * 1024 //1024 * 1024 * 100 // chunk to ~100MB CARs or 64 KB
+    const splitter = new TreewalkCarSplitter(bigCar, MaxCarSize1MB);
+    let uploadResp;
+    for await (const car of splitter.cars()) {
+      // Each `car` is an AsyncIterable<Uint8Array>
+      const reader = await CarReader.fromIterable(car);
+      const [splitCarRootCid] = await reader.getRoots();
+      console.assert(rootCid.equals(splitCarRootCid));
+      for await (const chunk of smallCar) {
+        let chunkie = fs.createReadStream(chunk);
+
+        uploadResp = await module.exports.uploadFile(chunkie, 3);
+
+        // all cars will have the same root
+        cars.push(chunk);
+      }
+    }
+    return uploadResp;
+  } catch (error) {
+    console.error(error);
+    return;
   }
 };
