@@ -135,7 +135,7 @@ module.exports.splitCars = async (largeCar) => {
       const reader = await CarReader.fromIterable(car);
       const [splitCarRootCid] = await reader.getRoots();
       console.assert(rootCid.equals(splitCarRootCid));
-      for await (const chunk of smallCar) {
+      for await (const chunk of car) {
         let chunkie = fs.createReadStream(chunk);
 
         uploadResp = await module.exports.uploadFile(chunkie, 3);
