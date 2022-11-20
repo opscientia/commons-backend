@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "@rstcruzo/express-chunked-file-upload": "^0.2.0",
     "axios": "^0.27.2",
     "bids-validator": "^1.9.3",
     "carbites": "^1.0.6",
