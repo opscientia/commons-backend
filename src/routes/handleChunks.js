@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const collectChunks = require("../services/collectChunks.service");
+const collectChunks = require("../services/handleChunks.service");
 
-router.get("/", collectChunks.collectChunks);
+router.get("/", collectChunks.handleChunks);
 
 module.exports = router;

@@ -329,9 +329,9 @@ const uploadFiles = async (req, res) => {
   // Upload file
   console.log(`${new Date().toISOString()} Uploading ${carFilename} to Estuary`);
   const file = fs.createReadStream(carFilename);
-  const uploadRespsplit = await estuaryWrapper.splitCars(carFilename, 3);
+  //const uploadRespsplit = await estuaryWrapper.splitCars(carFilename, 3);
 
-  const uploadResp = await estuaryWrapper.uploadFile(file, 3);
+  //const uploadResp = await estuaryWrapper.uploadFile(file, 3);
   // const uploadResp = { cid: "0x124", estuaryId: "81" }; // THIS LINE IS FOR TESTING ONLY
   await utils.removeFiles(timestampedFolder);
   if (!uploadResp) {

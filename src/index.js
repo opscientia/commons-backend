@@ -4,7 +4,7 @@ const cors = require("cors");
 const metadata = require("./routes/metadata");
 const uploadToEstuary = require("./routes/uploadToEstuary");
 const initializeUpload = require("./routes/initializeUpload");
-const collectChunks = require("../src/routes/handleChunks")
+const handleChunks = require("./routes/handleChunks")
 const app = express();
 
 const corsOptions = {
@@ -19,7 +19,8 @@ app.use(cors(corsOptions));
 app.use("/metadata", metadata);
 app.use("/uploadToEstuary", uploadToEstuary);
 app.use("/initializeUpload", initializeUpload);
-app.use("/collectChunks", collectChunks);
+app.use("/handleChunks", handleChunks);
+
 
 
 module.exports = app;
