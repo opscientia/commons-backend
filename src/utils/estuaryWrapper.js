@@ -47,12 +47,48 @@ module.exports.uploadFile = async (file, maxAttempts = 3) => {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
         },
       });
+      console.log(viewerResp.data.settings.uploadEndpoints);
+
       const url = viewerResp.data.settings.uploadEndpoints[0];
 
       // Upload file
       const resp = await axios.post(url, formData, {
         headers: {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      });
+      return resp.data;
+    } catch (err) {
+      numAttempts++;
+      console.log(
+        `estuaryWrapper.uploadFile: Error status: ${err.response?.status}. Error code: ${err.code}. Error message: ${err.message}`
+      );
+    }
+  }
+};
+
+module.exports.uploadFileAsCAR = async (file, maxAttempts = 3) => {
+  const formData = new FormData();
+  formData.append("data", file);
+  let numAttempts = 0;
+  while (numAttempts < maxAttempts) {
+    try {
+      // Get URL of shuttle node with most space
+      const viewerResp = await axios.get("https://api.estuary.tech/viewer", {
+        headers: {
+          Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+        },
+      });
+      const url = viewerResp.data.settings.uploadEndpoints[0];
+
+      console.log(url);
+      // Upload file
+      const resp = await axios.post(url, formData, {
+        headers: {
+          Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+          "Content-Type": "application/octet-stream",
         },
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
@@ -110,7 +146,7 @@ module.exports.uploadDirAsCar = async (pathToDir, pathToCar) => {
 
     console.log(`Uploading ${carFilename} to Estuary`);
     const file = fs.createReadStream(carFilename);
-    const uploadResp = await module.exports.uploadFile(file, 3);
+    const uploadResp = await module.exports.uploadFileAsCAR(file, 3);
 
     await utils.removeFiles(pathToCar);
     if (!uploadResp) console.log(`Failed to upload ${carFilename} to Estuary`);
@@ -126,24 +162,29 @@ module.exports.splitCars = async (largeCar) => {
     const bigCar = await CarReader.fromIterable(fs.createReadStream(largeCar));
     const [rootCid] = await bigCar.getRoots();
     const MaxCarSize1MB = 100000000;
+    let uploadResp = undefined;
+    let chunkie;
     let cars = [];
     //const targetSize =  64 * 1024 //1024 * 1024 * 100 // chunk to ~100MB CARs or 64 KB
-    const splitter = new TreewalkCarSplitter(bigCar, MaxCarSize1MB);
-    let uploadResp;
-    for await (const car of splitter.cars()) {
-      // Each `car` is an AsyncIterable<Uint8Array>
-      const reader = await CarReader.fromIterable(car);
-      const [splitCarRootCid] = await reader.getRoots();
-      console.assert(rootCid.equals(splitCarRootCid));
-      for await (const chunk of car) {
-        let chunkie = fs.createReadStream(chunk);
 
-        uploadResp = await module.exports.uploadFile(chunkie, 3);
+    if (largeCar.size <= MaxCarSize1MB) {
+      cars.push(car);
+    } else {
+      // when size exceeds MaxCarSize1MB, split it into an AsyncIterable<Uint8Array>
+      const splitter = new TreewalkCarSplitter(bigCar, MaxCarSize1MB);
 
-        // all cars will have the same root
-        cars.push(chunk);
+      for await (const smallCar of splitter.cars()) {
+        for await (const chunk of smallCar) {
+          cars.push(chunk);
+        }
       }
     }
+
+    for await (const c of cars) {
+      chunkie = new Buffer.from(c);
+      uploadResp = await module.exports.uploadFileAsCAR(chunkie, 3);
+    }
+
     return uploadResp;
   } catch (error) {
     console.error(error);
