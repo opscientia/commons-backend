@@ -1,5 +1,6 @@
 const axios = require("axios");
 const fs = require("fs");
+const fsp = require("fs/promises")
 const FormData = require("form-data");
 const { packToFs } = require("ipfs-car/pack/fs");
 const { FsBlockStore } = require("ipfs-car/blockstore/fs");
@@ -71,7 +72,9 @@ module.exports.uploadFile = async (file, maxAttempts = 3) => {
 
 module.exports.uploadFileAsCAR = async (file, maxAttempts = 3) => {
   const formData = new FormData();
-  formData.append("data", file);
+  chunkie = new Buffer.from(file);
+
+  formData.append("data", chunkie, "chunk");
   let numAttempts = 0;
   while (numAttempts < maxAttempts) {
     try {
@@ -81,8 +84,8 @@ module.exports.uploadFileAsCAR = async (file, maxAttempts = 3) => {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
         },
       });
-      const url = viewerResp.data.settings.uploadEndpoints[0];
-
+      //const url = viewerResp.data.settings.uploadEndpoints[0];
+      const url = "https://api.estuary.tech/content/add-car"
       console.log(url);
       // Upload file
       const resp = await axios.post(url, formData, {
@@ -115,8 +118,8 @@ module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
           },
         }
       );
-      console.log(
-        `estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`
+
+      `estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`
       );
       return true;
     } catch (err) {
@@ -181,8 +184,7 @@ module.exports.splitCars = async (largeCar) => {
     }
 
     for await (const c of cars) {
-      chunkie = new Buffer.from(c);
-      uploadResp = await module.exports.uploadFileAsCAR(chunkie, 3);
+      uploadResp = await module.exports.uploadFileAsCAR(c, 3);
     }
 
     return uploadResp;
