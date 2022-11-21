@@ -1,6 +1,6 @@
 const axios = require("axios");
 const fs = require("fs");
-const fsp = require("fs/promises")
+const fsp = require("fs/promises");
 const FormData = require("form-data");
 const { packToFs } = require("ipfs-car/pack/fs");
 const { FsBlockStore } = require("ipfs-car/blockstore/fs");
@@ -85,7 +85,7 @@ module.exports.uploadFileAsCAR = async (file, maxAttempts = 3) => {
         },
       });
       //const url = viewerResp.data.settings.uploadEndpoints[0];
-      const url = "https://api.estuary.tech/content/add-car"
+      const url = "https://api.estuary.tech/content/add-car";
       console.log(url);
       // Upload file
       const resp = await axios.post(url, formData, {
@@ -119,8 +119,10 @@ module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
         }
       );
 
-      `estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`
+      console.log(
+        `estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`
       );
+
       return true;
     } catch (err) {
       numAttempts++;
