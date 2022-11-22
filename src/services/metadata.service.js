@@ -25,7 +25,7 @@ const getDatasetMetadata = async (req, res) => {
   const address = req.query.address.toLowerCase();
 
   try {
-    const datasets = await dbWrapper.getDatasets({ uploader: address });
+    const datasets = await dbWrapper.getDatasets({ uploader: address, blacklisted: false });
     return res.status(200).json(datasets);
   } catch (err) {
     console.log(err);
@@ -48,11 +48,7 @@ const getPublishedDatasets = async (req, res) => {
 const getAllPublishedDatasets = async (req, res) => {
   console.log(`${new Date().toISOString()} getAllPublishedDatasets: entered`);
   try {
-    const datasets = await dbWrapper.getDatasets({ published: true });
-    return res.status(200).json(datasets);
-  } catch (err) {
-    console.log(err);
-  }
+    const datasets = await dbWrapper.getDatasets({ published: true, blacklisted: false})
   return res.status(404).json({ error: "There are no published datasets" });
 };
 
@@ -63,7 +59,7 @@ const getPublishedDatasetById = async (req, res) => {
     return res.status(404).json({ error: message });
   }
   try {
-    const query = { _id: mongodb.ObjectId(req.query.id), published: true };
+    const query = { _id: mongodb.ObjectId(req.query.id), published: true, blacklisted: false };
     const datasets = await dbWrapper.getDatasets(query);
     if (datasets?.length > 0) {
       return res.status(200).json(datasets[0]);
@@ -84,7 +80,7 @@ const getPublishedDatasetsByUploader = async (req, res) => {
   const uploader = req.query.uploader.toLowerCase();
   try {
     // Get dataset first to ensure datasetId refers to a published dataset
-    const dsQuery = { uploader: uploader, published: true };
+    const dsQuery = { uploader: uploader, published: true, blacklisted: false };
     const datasets = await dbWrapper.getDatasets(dsQuery);
     if (datasets.length > 0) {
       return res.status(200).json(datasets);
@@ -109,6 +105,7 @@ const searchPublishedDatasets = async (req, res) => {
       $text: {
         $search: searchStr,
       },
+      blacklisted: false
     };
     const datasets = await dbWrapper.getDatasets(query);
     return res.status(200).json(datasets);
@@ -196,7 +193,7 @@ const getPublishedChunksByDatasetId = async (req, res) => {
   }
   try {
     // Get dataset first to ensure datasetId refers to a published dataset
-    const dsQuery = { _id: mongodb.ObjectId(req.query.datasetId), published: true };
+    const dsQuery = { _id: mongodb.ObjectId(req.query.datasetId), published: true, blacklisted: false };
     const datasets = await dbWrapper.getDatasets(dsQuery);
     if (datasets.length > 0) {
       const chunksQuery = { datasetId: mongodb.ObjectId(req.query.datasetId) };
@@ -223,7 +220,7 @@ const getFileMetadata = async (req, res) => {
   const address = req.query.address.toLowerCase();
 
   try {
-    const datasets = await dbWrapper.getDatasets({ uploader: address });
+    const datasets = await dbWrapper.getDatasets({ uploader: address, blacklisted: false });
     const chunkIds = [];
     for (const dataset of datasets) {
       chunkIds.push(...dataset.chunkIds);
@@ -294,7 +291,7 @@ const deleteFileMetadata = async (req, res) => {
     return res.status(404).json({ error: message });
   }
   const datasetId = chunks[0].datasetId;
-  const datasets = await dbWrapper.getDatasets({ _id: datasetId });
+  const datasets = await dbWrapper.getDatasets({ _id: datasetId, blacklisted: false });
   if (!datasets || datasets.length == 0) {
     const message = "Failed to delete file metadata. No corresponding datasets found.";
     return res.status(404).json({ error: message });
@@ -326,7 +323,7 @@ const getAuthorsByDatasetId = async (req, res) => {
     return res.status(404).json({ error: message });
   }
   try {
-    const query = { _id: mongodb.ObjectId(req.query.datasetId), published: true };
+    const query = { _id: mongodb.ObjectId(req.query.datasetId), published: true, blacklisted: false };
     const datasets = await dbWrapper.getDatasets(query);
     if (datasets?.length > 0) {
       const authorIds = datasets[0].authors.map((idStr) => mongodb.ObjectId(idStr));
