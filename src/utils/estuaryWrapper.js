@@ -192,8 +192,7 @@ module.exports.splitCars = async (largeCar) => {
 
       for await (const smallCar of splitter.cars()) {
         for await (const chunk of smallCar) {
-         
-
+  
           cars.push(chunk);
         }
       }
@@ -201,6 +200,9 @@ module.exports.splitCars = async (largeCar) => {
 
     for await (const c of out) {
       uploadResp = await module.exports.uploadFileAsCAR(c, 3);
+      const newUploadCid = uploadResp.cid;
+      const newUploadEstuaryId = uploadResp.estuaryId;
+
     }
 
     return uploadResp;

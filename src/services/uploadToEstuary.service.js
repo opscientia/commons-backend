@@ -338,8 +338,7 @@ const uploadFiles = async (req, res) => {
     console.log(`${new Date().toISOString()} Failed to upload ${carFilename} to Estuary`);
     return res.status(400).json({ error: "An error occurred trying to upload to Estuary. Try again later." });
   }
-  const newUploadCid = uploadResp.cid;
-  const newUploadEstuaryId = uploadResp.estuaryId;
+ 
 
   // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
   const matchingChunkDocuments = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
