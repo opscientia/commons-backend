@@ -76,7 +76,7 @@ module.exports.uploadFile = async (file, maxAttempts = 3) => {
 
 module.exports.uploadFileAsCAR = async (file, maxAttempts = 3) => {
   const formData = new FormData();
-const chunkie = Buffer.from(file)
+  const chunkie = Buffer.from(file);
   formData.append("data", chunkie, "chunk");
   let numAttempts = 0;
   while (numAttempts < maxAttempts) {
@@ -175,36 +175,23 @@ module.exports.splitCars = async (largeCar) => {
     let uploadResp = undefined;
     let chunkie;
     let cars = [];
-
-    const { root, out } = await pack({
-      input: fs.createReadStream(largeCar),
-      blockstore: new MemoryBlockStore(),
-    });
-    console.log(root);
-    console.log(out);
-    //const targetSize =  64 * 1024 //1024 * 1024 * 100 // chunk to ~100MB CARs or 64 KB
-
     if (largeCar.size <= MaxCarSize1MB) {
       cars.push(largeCar);
     } else {
-      // when size exceeds MaxCarSize1MB, split it into an AsyncIterable<Uint8Array>
-      const splitter = new TreewalkCarSplitter(bigCar, MaxCarSize1MB);
-
-      for await (const smallCar of splitter.cars()) {
-        for await (const chunk of smallCar) {
-  
-          cars.push(chunk);
-        }
+      const { root, out } = await pack({
+        input: fs.createReadStream(largeCar),
+        blockstore: new MemoryBlockStore(),
+      });
+      console.log(root);
+      console.log(out);
+      for await (const c of out) {
+        uploadResp = await module.exports.uploadFileAsCAR(c, 3);
+        const newUploadCid = uploadResp.cid;
+        const newUploadEstuaryId = uploadResp.estuaryId;
+        // TODO: Store the chunks metadata, ie their cid, retrival url and estuaryID in Dataset Metadata
+        // TODO: Find a way to unpack and display the CAR file after combining the CHunks
       }
     }
-
-    for await (const c of out) {
-      uploadResp = await module.exports.uploadFileAsCAR(c, 3);
-      const newUploadCid = uploadResp.cid;
-      const newUploadEstuaryId = uploadResp.estuaryId;
-
-    }
-
     return uploadResp;
   } catch (error) {
     console.error(error.response);
