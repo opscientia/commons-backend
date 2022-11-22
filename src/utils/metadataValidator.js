@@ -20,6 +20,7 @@ const datasetSchema = yup.object().shape({
   doi: yup.string(),
   keywords: yup.array().of(yup.string()),
   published: yup.boolean(),
+  blacklisted: yup.boolean(),
   size: yup.number().positive(),
   standard: yup.object().shape({
     bids: bidsValidationSchema,

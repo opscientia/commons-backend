@@ -102,6 +102,7 @@ const searchPublishedDatasets = async (req, res) => {
   try {
     const query = {
       published: true,
+      blacklisted: false,
       $text: {
         $search: searchStr,
       },
@@ -163,6 +164,7 @@ const publishDataset = async (req, res) => {
     const updateDocument = {
       $set: {
         published: true,
+        blacklisted: false,
         title: title,
         description: description,
         authors: authorIds,

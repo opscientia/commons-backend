@@ -173,6 +173,7 @@ const generateDataset = (params) => {
     doi: params.doi, // TODO: Extract from dataset_description.json if it exists
     keywords: params.keywords || [], // TODO: Extract from dataset_description.json if it exists
     published: false,
+    blacklisted: false,
     size: params.size, // sumFileSizes,
     standard: {
       bids: {
