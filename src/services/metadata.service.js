@@ -49,6 +49,9 @@ const getAllPublishedDatasets = async (req, res) => {
   console.log(`${new Date().toISOString()} getAllPublishedDatasets: entered`);
   try {
     const datasets = await dbWrapper.getDatasets({ published: true, blacklisted: false})
+  }catch(err) {
+    console.error(err)
+  }
   return res.status(404).json({ error: "There are no published datasets" });
 };
 

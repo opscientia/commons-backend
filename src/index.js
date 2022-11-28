@@ -4,6 +4,7 @@ const cors = require("cors");
 const metadata = require("./routes/metadata");
 const uploadToEstuary = require("./routes/uploadToEstuary");
 const initializeUpload = require("./routes/initializeUpload");
+const blacklist = require("./routes/blacklist");
 
 const app = express();
 
@@ -19,5 +20,6 @@ app.use(cors(corsOptions));
 app.use("/metadata", metadata);
 app.use("/uploadToEstuary", uploadToEstuary);
 app.use("/initializeUpload", initializeUpload);
+app.use("/blacklist", blacklist);
 
 module.exports = app;
