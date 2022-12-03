@@ -1,11 +1,22 @@
 const axios = require("axios");
 const fs = require("fs");
+const fsp = require("fs/promises");
 const FormData = require("form-data");
-const { packToFs } = require("ipfs-car/pack/fs");
+const { packToF } = require("ipfs-car/pack/fs");
 const { FsBlockStore } = require("ipfs-car/blockstore/fs");
 const utils = require("./utils");
+const { TreewalkCarSplitter } = require("carbites/treewalk");
+const { CarReader } = require("@ipld/car/reader");
+const dagCbor = require("@ipld/dag-cbor");
+const { packToBlob } = require("ipfs-car/pack/blob");
+const { MemoryBlockStore } = require("ipfs-car/blockstore/memory");
+const { pack } = require("ipfs-car/pack");
+const { Buffer } = require("buffer");
 
-const estuaryEndpoints = ["https://shuttle-4.estuary.tech/content/add", "https://api.estuary.tech/content/add"];
+const estuaryEndpoints = [
+  "https://shuttle-4.estuary.tech/content/add",
+  "https://api.estuary.tech/content/add",
+];
 
 module.exports.getPinsList = async () => {
   try {
@@ -41,6 +52,8 @@ module.exports.uploadFile = async (file, maxAttempts = 3) => {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
         },
       });
+      console.log(viewerResp.data.settings.uploadEndpoints);
+
       const url = viewerResp.data.settings.uploadEndpoints[0];
 
       // Upload file
@@ -61,16 +74,60 @@ module.exports.uploadFile = async (file, maxAttempts = 3) => {
   }
 };
 
-module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
+module.exports.uploadFileAsCAR = async (file, maxAttempts = 3) => {
+  const formData = new FormData();
+  const chunkie = Buffer.from(file);
+  formData.append("data", chunkie, "chunk");
   let numAttempts = 0;
   while (numAttempts < maxAttempts) {
     try {
-      const resp = await axios.delete(`https://api.estuary.tech/pinning/pins/${requestid}`, {
+      // Get URL of shuttle node with most space
+      const viewerResp = await axios.get("https://api.estuary.tech/viewer", {
         headers: {
           Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
         },
       });
-      console.log(`estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`);
+      //const url = viewerResp.data.settings.uploadEndpoints[0];
+      const url = "https://api.estuary.tech/content/add-car";
+      //const url = "https://api.web3.storage/car"
+      console.log(url);
+      // Upload file
+      const resp = await axios.post(url, formData, {
+        headers: {
+          Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      });
+      console.log(resp.data);
+      return resp.data;
+    } catch (err) {
+      numAttempts++;
+      console.log(err.response);
+      console.log(
+        `estuaryWrapper.uploadFile: Error status: ${err.response?.status}. Error code: ${err.code}. Error message: ${err.message}`
+      );
+    }
+  }
+};
+
+module.exports.deleteFile = async (requestid, maxAttempts = 3) => {
+  let numAttempts = 0;
+  while (numAttempts < maxAttempts) {
+    try {
+      const resp = await axios.delete(
+        `https://api.estuary.tech/pinning/pins/${requestid}`,
+        {
+          headers: {
+            Authorization: "Bearer " + process.env.ESTUARY_API_KEY,
+          },
+        }
+      );
+
+      console.log(
+        `estuaryWrapper.deleteFile: Deleted file with requestid ${requestid}`
+      );
+
       return true;
     } catch (err) {
       numAttempts++;
@@ -99,12 +156,45 @@ module.exports.uploadDirAsCar = async (pathToDir, pathToCar) => {
 
     console.log(`Uploading ${carFilename} to Estuary`);
     const file = fs.createReadStream(carFilename);
-    const uploadResp = await module.exports.uploadFile(file, 3);
+    const uploadResp = await module.exports.uploadFileAsCAR(file, 3);
 
     await utils.removeFiles(pathToCar);
     if (!uploadResp) console.log(`Failed to upload ${carFilename} to Estuary`);
     return uploadResp;
   } catch (err) {
     console.log(err);
+  }
+};
+
+module.exports.splitCars = async (largeCar) => {
+  console.log("Chunking CAR File");
+  try {
+    const bigCar = await CarReader.fromIterable(fs.createReadStream(largeCar));
+    const [rootCid] = await bigCar.getRoots();
+    const MaxCarSize1MB = 100000000;
+    let uploadResp = undefined;
+    let chunkie;
+    let cars = [];
+    if (largeCar.size <= MaxCarSize1MB) {
+      cars.push(largeCar);
+    } else {
+      const { root, out } = await pack({
+        input: fs.createReadStream(largeCar),
+        blockstore: new MemoryBlockStore(),
+      });
+      console.log(root);
+      console.log(out);
+      for await (const c of out) {
+        uploadResp = await module.exports.uploadFileAsCAR(c, 3);
+        const newUploadCid = uploadResp.cid;
+        const newUploadEstuaryId = uploadResp.estuaryId;
+        // TODO: Store the chunks metadata, ie their cid, retrival url and estuaryID in Dataset Metadata
+        // TODO: Find a way to unpack and display the CAR file after combining the CHunks
+      }
+    }
+    return uploadResp;
+  } catch (error) {
+    console.error(error.response);
+    return;
   }
 };

@@ -6,6 +6,7 @@
   "dependencies": {
     "axios": "^0.27.2",
     "bids-validator": "^1.9.3",
+    "carbites": "^1.0.6",
     "chai": "^4.3.6",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",

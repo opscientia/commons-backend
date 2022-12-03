@@ -10,7 +10,6 @@ module.exports.removeFiles = async (pathToFiles) => {
     await fse.remove(pathToFiles);
     console.log(`Removed ${pathToFiles}`);
   } catch (err) {
-    console.error(err);
   }
 };
 

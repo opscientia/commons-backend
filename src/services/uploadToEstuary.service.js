@@ -13,6 +13,9 @@ const { msgCache } = require("../init");
 const dbWrapper = require("../utils/dbWrapper");
 const estuaryWrapper = require("../utils/estuaryWrapper");
 const utils = require("../utils/utils");
+const { error } = require("console");
+const { CarReader } = require( '@ipld/car/reader');
+const dagCbor = require ('@ipld/dag-cbor');
 
 const runBidsValidation = async (pathToDirectory) => {
   return new Promise((resolve) => {
@@ -31,7 +34,9 @@ const runBidsValidation = async (pathToDirectory) => {
       (issues, summary) => {
         if (issues.errors.length > 0) {
           console.log("BIDS validation failed");
-          resolve();
+          console.log(issues.errors);
+          resolve({ summary: summary, issues: issues });
+
         } else {
           console.log("BIDS validation succeeded");
           resolve({ summary: summary, issues: issues });
@@ -229,7 +234,6 @@ const insertMetadata = async (datasetMetadata, chunkMetadata, files) => {
     return false;
   }
 
-  // Chunk
   for (let numAttempts = 0; numAttempts < maxAttempts; numAttempts++) {
     chunk = generateChunk({
       datasetId: dataset._id,
@@ -312,10 +316,10 @@ const uploadFiles = async (req, res) => {
 
   const validatorData = await runBidsValidation(userDefinedRootDirLocal);
   if (!validatorData) {
-    await utils.removeFiles(timestampedFolder);
-    return res.status(400).json({ error: "BIDS validation failed." });
+     await utils.removeFiles(timestampedFolder);
+    return res.status(400).json({ error: "BIDS validation failed." + validatorData.issues.key });
   }
-
+// TODO: Replace the rest of the code in this function with uploadDirAsCar from estuaryWrapper
   const { root, filename: carFilename } = await packToFs({
     input: userDefinedRootDirLocal,
     output: `${timestampedFolder}/${userDefinedRootDir}.car`,
@@ -325,15 +329,16 @@ const uploadFiles = async (req, res) => {
   // Upload file
   console.log(`${new Date().toISOString()} Uploading ${carFilename} to Estuary`);
   const file = fs.createReadStream(carFilename);
-  const uploadResp = await estuaryWrapper.uploadFile(file, 3);
+  const uploadRespsplit = await estuaryWrapper.splitCars(carFilename.toString(), 3);
+
+  //const uploadResp = await estuaryWrapper.uploadFile(file, 3);
   // const uploadResp = { cid: "0x124", estuaryId: "81" }; // THIS LINE IS FOR TESTING ONLY
   await utils.removeFiles(timestampedFolder);
-  if (!uploadResp) {
+  if (!uploadRespsplit) {
     console.log(`${new Date().toISOString()} Failed to upload ${carFilename} to Estuary`);
     return res.status(400).json({ error: "An error occurred trying to upload to Estuary. Try again later." });
   }
-  const newUploadCid = uploadResp.cid;
-  const newUploadEstuaryId = uploadResp.estuaryId;
+ 
 
   // Delete this file from Estuary and exit if the user has already uploaded a file with this CID
   const matchingChunkDocuments = await dbWrapper.getChunks({ "storageIds.cid": newUploadCid });
